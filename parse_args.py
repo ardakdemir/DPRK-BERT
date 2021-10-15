@@ -1,4 +1,5 @@
 import argparse
+import config
 def parse_args():
     parser = argparse.ArgumentParser(description="Finetune a transformers model on a Masked Language Modeling task")
     parser.add_argument(
@@ -14,11 +15,11 @@ def parse_args():
         help="The configuration name of the dataset to use (via the datasets library).",
     )
     parser.add_argument(
-        "--train_file", type=str, default="data/rodong_mlm_training_data/train.json",
+        "--train_file", type=str, default=config.mlm_train_json,
         help="A csv or a json file containing the training data."
     )
     parser.add_argument(
-        "--validation_file", type=str, default="data/rodong_mlm_training_data/validation.json",
+        "--validation_file", type=str, default=config.mlm_validation_json,
         help="A csv or a json file containing the validation data."
     )
     parser.add_argument(

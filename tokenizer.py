@@ -18,7 +18,7 @@ class Tokenizer:
         token_ids = torch.tensor([self.tokenizer.convert_tokens_to_ids(tokens)])
         return token_ids, tokens
 
-    def tokenize(self,examples,kwargs={}):
+    def tokenize(self,example,kwargs={}):
         """
             I know it is super weird but works
         :param examples:
@@ -27,8 +27,8 @@ class Tokenizer:
         """
         tokenized = []
         if self.cleaner:
-            examples = list(map(lambda exp : self.cleaner.clean(exp),examples))
-        return self.tokenizer(examples[0],**kwargs)
+            example = self.cleaner.clean(example)
+        return self.tokenizer(example,**kwargs)
 
     def detokenize(self, tokens):
         string = []
@@ -41,3 +41,4 @@ class Tokenizer:
                     string.append(cur_token)
                 cur_token = t
         return " ".join(string)
+
