@@ -21,7 +21,7 @@ class BasicPlotter:
             old_metrics[k].append(v)
 
         for k,v in old_metrics.items():
-            p = os.path.join(self.save_root,prefix + k+".png")
+            p = os.path.join(self.save_root,self.prefix + k+".png")
 
             plt.figure()
             plt.plot(v)

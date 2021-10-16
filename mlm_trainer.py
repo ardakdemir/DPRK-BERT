@@ -41,8 +41,8 @@ vocab_path = "../kr-bert-pretrained/vocab_snu_char16424.txt"
 
 def get_exp_name(prefix=None):
     day, time = dt.datetime.now().isoformat().split("T")
-    suffix = "_".join([day, "-".join(time.split(".")[0].split(":")]))
-    if prefix:
+    suffix = "_".join([day, "-".join(time.split(".")[0].split(":"))])
+    if prefix is None:
         return suffix
     else:
         "_".join([prefix, suffix])
@@ -95,7 +95,7 @@ def train():
     model = init_mlm_model(config)
     tokenizer = init_tokenizer()
 
-    experiment_folder = os.path.join(config.OUTPUT_FOLDER, get_exp_name)
+    experiment_folder = os.path.join(config_file.OUTPUT_FOLDER, get_exp_name())
     plot_save_folder = os.path.join(experiment_folder, "plots")
     basic_plotter = BasicPlotter(plot_save_folder)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
