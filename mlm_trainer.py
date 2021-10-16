@@ -173,13 +173,13 @@ def train():
     completed_steps = 0
 
     print("Starting the training...")
+    model.to(device)
     for epoch in range(args.num_train_epochs):
         model.train()
         train_losses = []
         epoch_begin = time.time()
         for step, batch in enumerate(train_dataloader):
-            shape = batch["input_ids"].shape
-            print("Input id shape: {}".format(shape))
+            batch = {k: v.to(device) for k, v in batch.items()}
             outputs = model(**batch)
             loss = outputs.loss
             loss = loss / args.gradient_accumulation_steps
@@ -205,6 +205,7 @@ def train():
         losses = []
         eval_begin = time.time()
         for step, batch in enumerate(eval_dataloader):
+            batch = {k:v.to(device) for k,v in batch.items()}
             with torch.no_grad():
                 outputs = model(**batch)
 
