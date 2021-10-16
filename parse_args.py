@@ -15,6 +15,12 @@ def parse_args():
         help="The configuration name of the dataset to use (via the datasets library).",
     )
     parser.add_argument(
+        "--plot_save_path",
+        type=str,
+        default=None,
+        help="The configuration name of the dataset to use (via the datasets library).",
+    )
+    parser.add_argument(
         "--train_file", type=str, default=config.mlm_train_json,
         help="A csv or a json file containing the training data."
     )

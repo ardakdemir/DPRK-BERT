@@ -13,17 +13,21 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 import numpy as np
 import json
+import time
 from net import SentenceClassifier
 from tqdm import tqdm
 from parse_args import parse_args
 import config as config_file
 import os
+import datetime as dt
+from plotter import BasicPlotter
+
 from transformers import (BertConfig, BertModel,
                           BertForPreTraining,
                           BertTokenizer,
                           AutoModel,
                           BertForMaskedLM,
-                          AdamW,get_scheduler,
+                          AdamW, get_scheduler,
                           DataCollatorForLanguageModeling)
 
 logging.basicConfig(filename=config_file.LOG_FILE_PATH, level=logging.DEBUG)
@@ -35,6 +39,14 @@ config_file_path = "../kr-bert-pretrained/bert_config_char16424.json"
 vocab_path = "../kr-bert-pretrained/vocab_snu_char16424.txt"
 
 
+def get_exp_name(prefix=None):
+    day, time = dt.datetime.now().isoformat().split("T")
+    suffix = "_".join([day, "-".join(time.split(".")[0].split(":")]))
+    if prefix:
+        return suffix
+    else:
+        "_".join([prefix, suffix])
+
 
 def init_config():
     # Config
@@ -45,12 +57,14 @@ def init_config():
     print(config)
     return config
 
+
 def init_mlm_model(config):
     weights = torch.load(config_file.WEIGHT_FILE_PATH, map_location="cpu")
     model = BertForMaskedLM(config)
     incompatible_keys = model.load_state_dict(weights, strict=False)
-    print("Incompatible keys when loading",incompatible_keys)
+    print("Incompatible keys when loading", incompatible_keys)
     return model
+
 
 def init_tokenizer():
     tokenizer_krbert = BertTokenizer(config_file.VOCAB_PATH, do_lower_case=False)
@@ -58,7 +72,8 @@ def init_tokenizer():
     tokenizer = Tokenizer(tokenizer_krbert, cleaner)
     return tokenizer
 
-def tokenize_function(examples, tokenizer, text_column_name="data"):
+
+def tokenize_function(examples, tokenizer, max_seq_length=512, text_column_name="data"):
     # Remove empty lines
     examples = [
         line for example in examples for line in example[text_column_name].split("\n") if
@@ -68,10 +83,11 @@ def tokenize_function(examples, tokenizer, text_column_name="data"):
         example,
         {"padding": True,
          "truncation": True,
-         "max_length": args.max_seq_length,
+         "max_length": max_seq_length,
          # We use this option because DataCollatorForLanguageModeling (see below) is more efficient when it
          # receives the `special_tokens_mask`.
          "return_special_tokens_mask": True}) for example in examples]
+
 
 def train():
     args = parse_args()
@@ -79,6 +95,10 @@ def train():
     model = init_mlm_model(config)
     tokenizer = init_tokenizer()
 
+    experiment_folder = os.path.join(config.OUTPUT_FOLDER, get_exp_name)
+    plot_save_folder = os.path.join(experiment_folder, "plots")
+    basic_plotter = BasicPlotter(plot_save_folder)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # Dataset
     data_files = {}
     if args.train_file is not None:
@@ -95,7 +115,7 @@ def train():
     # Tokenize dataset
     tokenized_datasets = {}
     for s in ["train", "validation"]:
-        examples = [raw_datasets[s][i] for i in range(5)]
+        examples = raw_datasets[s]
         tokenized_datasets[s] = tokenize_function(examples, tokenizer)
 
         # print(tokenizer_output)
@@ -106,7 +126,6 @@ def train():
 
     train_dataset = tokenized_datasets["train"]
     eval_dataset = tokenized_datasets["validation"]
-
 
     print("MLM with probability: {}".format(args.mlm_probability))
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer.tokenizer, mlm_probability=args.mlm_probability)
@@ -137,7 +156,7 @@ def train():
     if args.max_train_steps is None:
         args.max_train_steps = args.num_train_epochs * num_update_steps_per_epoch
     else:
-        args.num_train_epochs = math.max(10,math.ceil(args.max_train_steps / num_update_steps_per_epoch))
+        args.num_train_epochs = math.max(10, math.ceil(args.max_train_steps / num_update_steps_per_epoch))
 
     lr_scheduler = get_scheduler(
         name=args.lr_scheduler_type,
@@ -156,8 +175,9 @@ def train():
     print("Starting the training...")
     for epoch in range(args.num_train_epochs):
         model.train()
+        train_losses = []
+        epoch_begin = time.time()
         for step, batch in enumerate(train_dataloader):
-            # print(batch)
             shape = batch["input_ids"].shape
             print("Input id shape: {}".format(shape))
             outputs = model(**batch)
@@ -165,6 +185,7 @@ def train():
             loss = loss / args.gradient_accumulation_steps
             logging.info("Loss: {}".format(loss.item()))
             print("Loss item: {}".format(loss.item()))
+            train_losses.append(loss.item())
             loss.backward()
             if step % args.gradient_accumulation_steps == 0 or step == len(train_dataloader) - 1:
                 optimizer.step()
@@ -175,25 +196,35 @@ def train():
 
             if completed_steps >= args.max_train_steps:
                 break
+
+        epoch_end  = time.time()
+        train_epoch_time = round(epoch_end - epoch_begin, 3)
+        basic_plotter.send_metrics({"train_loss": np.mean(train_losses),"train_epoch_time":train_epoch_time})
+
         model.eval()
         losses = []
+        eval_begin = time.time()
         for step, batch in enumerate(eval_dataloader):
             with torch.no_grad():
                 outputs = model(**batch)
 
             loss = outputs.loss
-            losses.append(loss.item())
-
-        losses = torch.cat(losses)
+            losses.append(loss)
+        losses = torch.stack(losses, dim=0)
         losses = losses[: len(eval_dataset)]
+        eval_end = time.time()
+        eval_time = round(eval_end-eval_begin,3)
         try:
             perplexity = math.exp(torch.mean(losses))
         except OverflowError:
             perplexity = float("inf")
+        basic_plotter.send_metrics({"validation_perplexity": perplexity,"validation_time":eval_time})
         print(f"epoch {epoch}: perplexity: {perplexity}")
+
 
 def main():
     train()
+
 
 if __name__ == "__main__":
     main()
