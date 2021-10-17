@@ -14,7 +14,7 @@ from sklearn.decomposition import PCA
 import numpy as np
 import json
 import time
-from net import SentenceClassifier
+# from net import SentenceClassifier
 from tqdm import tqdm
 from parse_args import parse_args
 import config as config_file

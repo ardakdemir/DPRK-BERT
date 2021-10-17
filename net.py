@@ -1,6 +1,4 @@
 import torch.nn as nn
-from transformers.modeling_bert import BertPreTrainedModel, BertModel
-
 
 class SentenceClassifier(BertPreTrainedModel):
     def __init__(self, config, num_classes) -> None:
