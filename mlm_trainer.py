@@ -112,6 +112,8 @@ def train():
     column_names = raw_datasets["train"].column_names
     column_name = "data"
 
+    model_save_path = os.path.join(experiment_folder,"best_model_weights.pkh")
+
     # Tokenize dataset
     tokenized_datasets = {}
     for s in ["train", "validation"]:
@@ -174,6 +176,7 @@ def train():
 
     print("Starting the training...")
     model.to(device)
+    min_perplexity = 1e6
     for epoch in range(args.num_train_epochs):
         model.train()
         train_losses = []
@@ -184,7 +187,7 @@ def train():
             loss = outputs.loss
             loss = loss / args.gradient_accumulation_steps
             logging.info("Loss: {}".format(loss.item()))
-            print("Loss item: {}".format(loss.item()))
+            # print("Loss item: {}".format(loss.item()))
             train_losses.append(loss.item())
             loss.backward()
             if step % args.gradient_accumulation_steps == 0 or step == len(train_dataloader) - 1:
@@ -220,8 +223,11 @@ def train():
         except OverflowError:
             perplexity = float("inf")
         basic_plotter.send_metrics({"validation_perplexity": perplexity,"validation_time":eval_time})
-        print(f"epoch {epoch}: perplexity: {perplexity}")
-
+        # print(f"epoch {epoch}: perplexity: {perplexity}")
+        if perplexity < min_perplexity:
+            print("Saving best model to: {}".format(model_save_path))
+            best_model_weights = model.state_dict()
+            torch.save(best_model_weights, model_save_path)
 
 def main():
     train()

@@ -11,7 +11,8 @@ WEIGHT_FILE_PATH = "../kr-bert-pretrained/pytorch_model_char16424_bert.bin"
 CONFIG_FILE_PATH = "../kr-bert-pretrained/bert_config_char16424.json"
 VOCAB_PATH = "../kr-bert-pretrained/vocab_snu_char16424.txt"
 
-mlm_train_json = os.path.join(RODONG_MLM_ROOT,"train_toy.json")
-mlm_validation_json = os.path.join(RODONG_MLM_ROOT,"train_toy.json")
+mlm_train_json = os.path.join(RODONG_MLM_ROOT,"train.json")
+mlm_validation_json = os.path.join(RODONG_MLM_ROOT,"validation.json")
+
 
 OUTPUT_FOLDER = "../experiment_outputs"
