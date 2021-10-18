@@ -410,12 +410,22 @@ def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10):
         batch = {k: v.to(device) for k, v in batch.items()}
         num_sents = len(batch["input_ids"])
         preds = {}
+
+        model_input_begin = time.time()
         for k, model in models.items():
             with torch.no_grad():
                 outputs = model(**batch)
             preds[k] = outputs.logits
             losses[k].append(outputs.loss.detach().cpu().item())
+        model_input_end = time.time()
+        model_input_time = round(model_input_end-model_input_begin,3)
+
+        analysis_begin = time.time()
         pred_info, batch_corrects, batch_ranks, total_masks = analyze_mlm_predictions(tokenizer.tokenizer, batch, preds)
+        analysis_end = time.time()
+        analysis_time = round(analysis_end-analysis_begin,3)
+        print("model input time", model_input_time," analysis time ", analysis_time)
+
         for k, c in batch_corrects.items():
             corrects[k] += c
             ranks[k].extend(batch_ranks[k])
