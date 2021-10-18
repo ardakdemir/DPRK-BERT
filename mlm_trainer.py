@@ -129,7 +129,7 @@ def analyze_mlm_predictions(tokenizer, batch, preds, topN=10):
             data = {"mask_index": index, "masked_word": correct_word, "model_data": {}}
             for k, pred in preds.items():
                 pred = pred[sent_index]
-                probs = softmax_layer(pred[index]).detach().numpy()
+                probs = softmax_layer(pred[index]).detach().cpu().numpy()
                 token_probs = [(i, p) for i, p in enumerate(probs)]
                 token_probs.sort(key=lambda x: x[1], reverse=True)
                 top_n_preds = tokenizer.convert_ids_to_tokens([x[0] for x in token_probs[:topN]])
@@ -411,7 +411,7 @@ def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10):
             with torch.no_grad():
                 outputs = model(**batch)
             preds[k] = outputs.logits
-            losses[k].append(outputs.loss.detach().item())
+            losses[k].append(outputs.loss.detach().cpu().item())
         pred_info, batch_corrects, batch_ranks, total_masks = analyze_mlm_predictions(tokenizer.tokenizer, batch, preds)
         for k, c in batch_corrects.items():
             corrects[k] += c
@@ -531,7 +531,7 @@ def evaluate():
     #                "DPRK-BERT": {"model_name":"../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh",
     #                              "tokenizer":None,"config_name":None}}
     model_paths = {"KR-BERT": {
-        "model_name": "/Users/ardaakdemir/dprk_research/kr-bert-pretrained/pytorch_model_char16424_bert.bin",
+        "model_name": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",
         "tokenizer": None,
         "config_name": None},
         "DPRK-BERT": {"model_name": "../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh",
