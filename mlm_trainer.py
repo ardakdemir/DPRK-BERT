@@ -360,6 +360,7 @@ def evaluate_multiple_models_mlm_wrapper(model_path_dict, dataset_path, repeat=5
     raw_datasets = load_dataset("json", data_files={"test": dataset_path}, field="data")
     eval_dataset = tokenize_function(raw_datasets["test"], tokenizer)
     args = parse_args()
+    break_after = args.validation_steps
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer.tokenizer,
                                                     mlm_probability=args.mlm_probability)
     eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator,
@@ -371,12 +372,13 @@ def evaluate_multiple_models_mlm_wrapper(model_path_dict, dataset_path, repeat=5
         max_seq_length = args.max_seq_length
         config_name = model_dict["config_name"]
         model = init_mlm_model(config, weight_file_path=model_path, from_pretrained=config_name is not None)
+        model.to(device)
         models[k] = model
     all_results = {}
     all_pred_info_dicts = {}
     for r in range(repeat):
         print("Starting repeat: {}".format(r))
-        results, pred_info_dict = evaluate_multiple_models_mlm(models, eval_dataloader, tokenizer, break_after=1e6)
+        results, pred_info_dict = evaluate_multiple_models_mlm(models, eval_dataloader, tokenizer, break_after=break_after)
         all_results[r] = results
         all_pred_info_dicts[r] = pred_info_dict
     return all_results, all_pred_info_dicts
@@ -393,6 +395,7 @@ def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10):
     :param break_after:
     :return:
     """
+    print("Device {}".format(device))
     for k, model in models.items():
         model.eval()
         model.to(device)
