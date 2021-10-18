@@ -69,8 +69,9 @@ def init_config(config_name=None):
 
 def init_mlm_model(config, weight_file_path=None, from_pretrained=False):
     if not from_pretrained:
-        weights = torch.load(config_file.WEIGHT_FILE_PATH if weight_file_path is None else weight_file_path,
-                             map_location="cpu")
+        if weight_file_path is None:
+            weight_file_path = config_file.WEIGHT_FILE_PATH
+        weights = torch.load(weight_file_path, map_location="cpu")
         model = BertForMaskedLM(config)
         model_name = os.path.split(weight_file_path)[-1]
         if model_name == KR_BERT_MODEL_NAME:
@@ -129,9 +130,9 @@ def analyze_mlm_predictions(tokenizer, batch, preds, topN=10):
             data = {"mask_index": index, "masked_word": correct_word, "model_data": {}}
             for k, pred in preds.items():
                 pred = pred[sent_index]
-                probs = softmax_layer(pred[index]).detach().cpu().numpy()
-                token_probs = [(i, p) for i, p in enumerate(probs)]
-                token_probs.sort(key=lambda x: x[1], reverse=True)
+                probs = torch.sort(softmax_layer(pred[index]),descending=True).detach().cpu().numpy()
+                token_probs = [(i, v) for v, i in probs]
+                # token_probs.sort(key=lambda x: x[1], reverse=True)
                 top_n_preds = tokenizer.convert_ids_to_tokens([x[0] for x in token_probs[:topN]])
                 correct_prob = float(probs[lab].item())
                 correct_token_rank = -1
@@ -378,7 +379,8 @@ def evaluate_multiple_models_mlm_wrapper(model_path_dict, dataset_path, repeat=5
     all_pred_info_dicts = {}
     for r in range(repeat):
         print("Starting repeat: {}".format(r))
-        results, pred_info_dict = evaluate_multiple_models_mlm(models, eval_dataloader, tokenizer, break_after=break_after)
+        results, pred_info_dict = evaluate_multiple_models_mlm(models, eval_dataloader, tokenizer,
+                                                               break_after=break_after)
         all_results[r] = results
         all_pred_info_dicts[r] = pred_info_dict
     return all_results, all_pred_info_dicts
@@ -406,7 +408,8 @@ def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10):
     eval_begin = time.time()
     prediction_info_dict = []
     results = {}
-    for step, batch in tqdm(enumerate(dataloader), desc="batch"):
+    progress_bar = tqdm(range(break_after),desc="Batches")
+    for step, batch in enumerate(dataloader):
         batch = {k: v.to(device) for k, v in batch.items()}
         num_sents = len(batch["input_ids"])
         preds = {}
@@ -418,14 +421,14 @@ def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10):
             preds[k] = outputs.logits
             losses[k].append(outputs.loss.detach().cpu().item())
         model_input_end = time.time()
-        model_input_time = round(model_input_end-model_input_begin,3)
+        model_input_time = round(model_input_end - model_input_begin, 3)
 
         analysis_begin = time.time()
         pred_info, batch_corrects, batch_ranks, total_masks = analyze_mlm_predictions(tokenizer.tokenizer, batch, preds)
         analysis_end = time.time()
-        analysis_time = round(analysis_end-analysis_begin,3)
-        print("model input time", model_input_time," analysis time ", analysis_time)
-
+        analysis_time = round(analysis_end - analysis_begin, 3)
+        print("model input time", model_input_time, " analysis time ", analysis_time)
+        progress_bar.update(1)
         for k, c in batch_corrects.items():
             corrects[k] += c
             ranks[k].extend(batch_ranks[k])
