@@ -1,5 +1,7 @@
 import argparse
 import config
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Finetune a transformers model on a Masked Language Modeling task")
     parser.add_argument(
@@ -111,6 +113,11 @@ def parse_args():
         default=None,
         help="Model type to use if training from scratch.",
         choices=["BertModel"],
+    )
+    parser.add_argument(
+        "--mode", type=str, default="train",
+        help="Mode of the script",
+        choices=["evaluate","train"],
     )
     parser.add_argument(
         "--max_seq_length",

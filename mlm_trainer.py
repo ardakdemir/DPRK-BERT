@@ -119,7 +119,7 @@ def analyze_mlm_predictions(tokenizer, batch, preds, topN=10):
                 raw_tokens.append(t)
         number_of_masks.append(mask_count)
         raw_sentence = tokenizer.convert_tokens_to_string(raw_tokens)
-        print("sentence_with_masks: {}\nraw_sentence: {}".format(sentence, raw_sentence))
+        # print("sentence_with_masks: {}\nraw_sentence: {}".format(sentence, raw_sentence))
         my_info["raw_sentence"] = raw_sentence
         my_info['predictions'] = []
         for index, (token, lab) in enumerate(zip(tokens, label)):
@@ -128,11 +128,8 @@ def analyze_mlm_predictions(tokenizer, batch, preds, topN=10):
             correct_word = tokenizer.convert_ids_to_tokens([lab])[0]
             data = {"mask_index": index, "masked_word": correct_word, "model_data": {}}
             for k, pred in preds.items():
-                # print("Pred shape: {} number of Tokens: {}".format(pred[sent_index].shape, len(tokens)))
                 pred = pred[sent_index]
                 probs = softmax_layer(pred[index]).detach().numpy()
-                # print("Preds shape: {} Max pred: {} Correct pred: {}".format(pred[index].shape,pred[index],np.max(pred[index]),pred[index][lab]))
-                # print("Probs",probs)
                 token_probs = [(i, p) for i, p in enumerate(probs)]
                 token_probs.sort(key=lambda x: x[1], reverse=True)
                 top_n_preds = tokenizer.convert_ids_to_tokens([x[0] for x in token_probs[:topN]])
@@ -143,11 +140,11 @@ def analyze_mlm_predictions(tokenizer, batch, preds, topN=10):
                     if t == lab:
                         correct_token_rank = i + 1  # 0 indexed
                         break
-                print("Model name: {} correct word: {} correct_prob {} correct_rank {} top_n_preds {} ".format(k,
-                                                                                                               correct_word,
-                                                                                                               correct_prob,
-                                                                                                               correct_token_rank,
-                                                                                                               top_n_preds))
+                # print("Model name: {} correct word: {} correct_prob {} correct_rank {} top_n_preds {} ".format(k,
+                #                                                                                                correct_word,
+                #                                                                                                correct_prob,
+                #                                                                                                correct_token_rank,
+                #                                                                                                top_n_preds))
                 model_data = {"correct": correct_token_rank == 1,
                               "correct_prob": correct_prob,
                               "top_n_preds": top_n_preds,
@@ -378,6 +375,7 @@ def evaluate_multiple_models_mlm_wrapper(model_path_dict, dataset_path, repeat=5
     all_results = {}
     all_pred_info_dicts = {}
     for r in range(repeat):
+        print("Starting repeat: {}".format(r))
         results, pred_info_dict = evaluate_multiple_models_mlm(models, eval_dataloader, tokenizer, break_after=10)
         all_results[r] = results
         all_pred_info_dicts[r] = pred_info_dict
@@ -397,6 +395,7 @@ def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10):
     """
     for k, model in models.items():
         model.eval()
+        model.to(device)
     losses = defaultdict(list)
     corrects = defaultdict(int)
     ranks = defaultdict(list)
@@ -404,10 +403,9 @@ def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10):
     eval_begin = time.time()
     prediction_info_dict = []
     results = {}
-    for step, batch in enumerate(dataloader):
+    for step, batch in tqdm(enumerate(dataloader), desc="batch"):
         batch = {k: v.to(device) for k, v in batch.items()}
         num_sents = len(batch["input_ids"])
-        print("Nummber of sentences in batch: {}".format(num_sents))
         preds = {}
         for k, model in models.items():
             with torch.no_grad():
@@ -562,9 +560,14 @@ def evaluate():
         plot_save_path = os.path.join(save_folder, "{}.png".format(metric))
         joint_plot(results, plot_save_path, y_label=metric.title())
 
+
 def main():
-    # train()
-    evaluate()
+    args = parse_args()
+    mode = args.mode
+    if mode == "train":
+        train()
+    elif mode == "evaluate":
+        evaluate()
 
 
 if __name__ == "__main__":
