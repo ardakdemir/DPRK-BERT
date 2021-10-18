@@ -130,7 +130,7 @@ def analyze_mlm_predictions(tokenizer, batch, preds, topN=10):
             data = {"mask_index": index, "masked_word": correct_word, "model_data": {}}
             for k, pred in preds.items():
                 pred = pred[sent_index]
-                sorted, indices = = torch.sort(softmax_layer(pred[index]),descending=True)
+                sorted, indices = torch.sort(softmax_layer(pred[index]),descending=True)
                 token_probs = [(i, v) for v, i in zip(sorted.detach().cpu().numpy,indices.detach().cpu().numpy())]
                 # token_probs.sort(key=lambda x: x[1], reverse=True)
                 top_n_preds = tokenizer.convert_ids_to_tokens([x[0] for x in token_probs[:topN]])
