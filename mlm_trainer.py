@@ -564,7 +564,7 @@ def evaluate():
     predinfo_save_path = os.path.join(save_folder, "prediction_info_dict.json")
 
     # results = evaluate_model_perplexity(model_paths, dataset_path)
-    all_results, all_prediction_info_dict = evaluate_multiple_models_mlm_wrapper(model_paths, dataset_path, repeat=5)
+    all_results, all_prediction_info_dict = evaluate_multiple_models_mlm_wrapper(model_paths, dataset_path, repeat=args.eval_repeat)
     print(all_results)
     with open(predinfo_save_path, "w") as o:
         json.dump(all_prediction_info_dict, o)

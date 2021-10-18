@@ -83,6 +83,8 @@ def parse_args():
     )
     parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay to use.")
     parser.add_argument("--num_train_epochs", type=int, default=20, help="Total number of training epochs to perform.")
+    parser.add_argument("--mlm_eval_repeat", type=int, default=1, help="Total number of repeats for evaluation.")
+
     parser.add_argument("--validation_steps", type=int, default=500, help="Total number of validation steps on the val set.")
 
     parser.add_argument(
