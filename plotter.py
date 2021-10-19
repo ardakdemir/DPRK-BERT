@@ -4,15 +4,40 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 
 
-def joint_plot(value_dict, save_path, y_label=None):
+def joint_line_plot(value_dict, save_path, y_label=None):
     root = os.path.split(save_path)[0]
-    if not os.path.exists(root):os.makedirs(root)
+    if not os.path.exists(root): os.makedirs(root)
     plt.figure(figsize=(12, 8))
     for c, n in value_dict.items():
         plt.plot(n, label=c)
     if y_label is not None:
         plt.ylabel(y_label)
+
     plt.xticks(np.arange(0, len(list(value_dict.values())[0]), 1.0))
+    plt.legend()
+    plt.savefig(save_path)
+    plt.close("all")
+
+
+def joint_bar_plot(value_dict, save_path, y_label=None, width=0.25, separation=0.5):
+    """
+        Cool script to auto-adjust the bar separations
+        Let me create a plotting repository for this
+    """
+    root = os.path.split(save_path)[0]
+    if not os.path.exists(root): os.makedirs(root)
+    plt.figure(figsize=(12, 8))
+    model_names = list(value_dict.keys())
+    num = len(model_names)
+    offset = lambda index: 1 + separation * index + (num * width) * index
+    x_positions = [offset(index) for index in range(len(value_dict[model_names[0]])) ]
+    for i, m in enumerate(model_names):
+        values = value_dict[m]
+        plt.bar(x=[offset(index) + width * i - ((num - 1) / 2) * width for index in range(len(values))], height=values,
+                label=m, width=width)
+    if y_label is not None:
+        plt.ylabel(y_label)
+    plt.xticks(x_positions, [str(1 + i) for i in range(len(x_positions))])
     plt.legend()
     plt.savefig(save_path)
     plt.close("all")

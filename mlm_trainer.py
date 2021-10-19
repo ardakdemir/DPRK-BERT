@@ -22,7 +22,7 @@ from parse_args import parse_args
 import config as config_file
 import os
 import datetime as dt
-from plotter import BasicPlotter, joint_plot
+from plotter import BasicPlotter, joint_bar_plot
 
 from transformers import (BertConfig, BertModel,
                           BertForPreTraining,
@@ -436,7 +436,7 @@ def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10, 
             with torch.no_grad():
                 outputs = model(**batch)
             preds[k] = outputs.logits
-            losses[k].append(outputs.loss.detach().cpu().item())
+            losses[k].append(round(outputs.loss.detach().cpu().item(),3))
         model_input_end = time.time()
         model_input_time = round(model_input_end - model_input_begin, 3)
         pred_info, ranks = None, None
@@ -462,7 +462,7 @@ def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10, 
     for k in models:
         perplexity = math.exp(np.mean(losses[k]))
         results[k] = {"perplexity": perplexity,
-                      "accuracy": round(corrects[k] / total_examples, 3)}
+                      "accuracy": 100*round(corrects[k] / total_examples, 3)}
         if not metric_only:
             my_ranks = ranks[k]
             mrr = np.mean([1 / x for x in my_ranks])
@@ -577,7 +577,8 @@ def evaluate():
         "config_name": None},
         "DPRK-BERT": {"model_name": "../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh",
                       "tokenizer": None, "config_name": None}}
-    dataset_path = "../dprk-bert-data/rodong_mlm_training_data/validation.json"
+    # dataset_path = "../dprk-bert-data/rodong_mlm_training_data/validation.json"
+    dataset_path = "../dprk-bert-data/new_year_mlm_data/train.json"
 
     prefix = "comparison"
     exp_name = get_exp_name(prefix)
@@ -586,13 +587,20 @@ def evaluate():
     save_folder = os.path.join("../experiment_outputs", exp_name)
     if not os.path.exists(save_folder): os.makedirs(save_folder)
     predinfo_save_path = os.path.join(save_folder, "prediction_info_dict.json")
+    result_save_path = os.path.join(save_folder, "results.json")
+    experiment_detail_save_path = os.path.join(save_folder, "experiment_details.json")
 
+    experiment_details = {"dataset_path":dataset_path,"model_paths":model_paths}
     # results = evaluate_model_perplexity(model_paths, dataset_path)
     all_results, all_prediction_info_dict = evaluate_multiple_models_mlm_wrapper(model_paths, dataset_path,
                                                                                  repeat=args.mlm_eval_repeat)
     print(all_results)
     with open(predinfo_save_path, "w") as o:
         json.dump(all_prediction_info_dict, o)
+    with open(result_save_path, "w") as o:
+        json.dump(all_results, o)
+    with open(experiment_detail_save_path, "w") as o:
+        json.dump(experiment_details, o)
     repeat_keys = list(all_results.keys())
     model_keys = list(all_results[repeat_keys[0]].keys())
     all_metrics = list(all_results[repeat_keys[0]][model_keys[0]].keys())
@@ -600,7 +608,7 @@ def evaluate():
     for metric in all_metrics:
         results = {m: [all_results[x][m][metric] for x in repeat_keys] for m in model_keys}
         plot_save_path = os.path.join(save_folder, "{}.png".format(metric))
-        joint_plot(results, plot_save_path, y_label=metric.title())
+        joint_bar_plot(results, plot_save_path, y_label=metric.title())
 
 
 def main():

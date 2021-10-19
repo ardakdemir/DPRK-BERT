@@ -5,6 +5,9 @@ import subprocess
 
 hgc_root = "hgc:~"
 class HgcSyncer:
+    """
+        Not completed...
+    """
     def __init__(self,root_folder,save_folder):
         self.root_folder = root_folder
         if not os.path.exists
