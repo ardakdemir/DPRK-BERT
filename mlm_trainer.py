@@ -134,12 +134,14 @@ def analyze_mlm_predictions(tokenizer, batch, preds, topN=10):
                 token_probs = [(i, v) for v, i in zip(sorted.detach().cpu().numpy(),indices.detach().cpu().numpy())]
                 # token_probs.sort(key=lambda x: x[1], reverse=True)
                 top_n_preds = tokenizer.convert_ids_to_tokens([x[0] for x in token_probs[:topN]])
-                correct_prob = float(probs[lab].item())
+                top_n_probs = [x[1].item() for x in token_probs[:topN]]
+                print("Top n probs: {} ".format(top_n_probs))
                 correct_token_rank = -1
                 for i, tok_prob in enumerate(token_probs):
                     t, p = tok_prob
                     if t == lab:
                         correct_token_rank = i + 1  # 0 indexed
+                        correct_prob = float(p.item())
                         break
                 # print("Model name: {} correct word: {} correct_prob {} correct_rank {} top_n_preds {} ".format(k,
                 #                                                                                                correct_word,
@@ -175,6 +177,7 @@ def tokenize_function(examples, tokenizer, max_seq_length=512, text_column_name=
         line for example in examples for line in example[text_column_name].split("\n") if
         len(line) > 0 and not line.isspace()
     ]
+
     return [tokenizer.tokenize(
         example,
         {"padding": True,

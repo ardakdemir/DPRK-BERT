@@ -20,7 +20,7 @@ class Tokenizer:
 
     def tokenize(self,example,kwargs={}):
         """
-            I know it is super weird but works
+        Clean and map DPRK to RoK then tokenize with the KR-BERT tokenizer
         :param examples:
         :param kwargs:
         :return:
