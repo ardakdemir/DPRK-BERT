@@ -440,7 +440,7 @@ def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10, 
             losses[k].append(round(outputs.loss.detach().cpu().item(),3))
         model_input_end = time.time()
         model_input_time = round(model_input_end - model_input_begin, 3)
-        pred_info, ranks = None, None
+        pred_info, batch_ranks = None, None
         analysis_begin = time.time()
         if not metric_only:
             pred_info, batch_corrects, batch_ranks, total_masks = analyze_mlm_predictions(tokenizer.tokenizer, batch,
@@ -453,7 +453,7 @@ def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10, 
         progress_bar.update(1)
         for k, c in batch_corrects.items():
             corrects[k] += c
-            if ranks is not None:
+            if batch_ranks is not None:
                 ranks[k].extend(batch_ranks[k])
         total_examples += total_masks
         if pred_info is not None:
