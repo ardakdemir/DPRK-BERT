@@ -88,6 +88,20 @@ def init_mlm_model(config, weight_file_path=None, from_pretrained=False):
         return model
 
 
+def get_corrects(batch, preds):
+    labels = batch["labels"]
+    mask_count = torch.sum(labels != -100).detach().cpu().item()
+    print("{} masked tokens in this batch".format(mask_count))
+    correct_dict = {}
+    for k, p in preds.items():
+        print("Label shape {} pred shape {}".format(labels.shape, p.shape))
+        indx = torch.argmax(p, dim=2)
+        corrects = torch.sum(indx == labels).detach().cpu().item()
+        print("{}/{} masked tokens are correct for {} ".format(corrects, mask_count, k))
+        correct_dict[k] = corrects
+    return None, correct_dict, None, mask_count
+
+
 def analyze_mlm_predictions(tokenizer, batch, preds, topN=10):
     """
 
@@ -130,8 +144,8 @@ def analyze_mlm_predictions(tokenizer, batch, preds, topN=10):
             data = {"mask_index": index, "masked_word": correct_word, "model_data": {}}
             for k, pred in preds.items():
                 pred = pred[sent_index]
-                sorted, indices = torch.sort(softmax_layer(pred[index]),descending=True)
-                token_probs = [(i, v) for v, i in zip(sorted.detach().cpu().numpy(),indices.detach().cpu().numpy())]
+                sorted, indices = torch.sort(softmax_layer(pred[index]), descending=True)
+                token_probs = [(i, v) for v, i in zip(sorted.detach().cpu().numpy(), indices.detach().cpu().numpy())]
                 # token_probs.sort(key=lambda x: x[1], reverse=True)
                 top_n_preds = tokenizer.convert_ids_to_tokens([x[0] for x in token_probs[:topN]])
                 top_n_probs = [x[1].item() for x in token_probs[:topN]]
@@ -151,7 +165,7 @@ def analyze_mlm_predictions(tokenizer, batch, preds, topN=10):
                               "correct_prob": correct_prob,
                               "top_n_preds": top_n_preds,
                               "correct_rank": correct_token_rank,
-                              "top_n_probs":top_n_probs}
+                              "top_n_probs": top_n_probs}
                 if correct_token_rank == 1:  # Top prediction
                     corrects[k] += 1
                 ranks[k].append(correct_token_rank)
@@ -389,7 +403,7 @@ def evaluate_multiple_models_mlm_wrapper(model_path_dict, dataset_path, repeat=5
     return all_results, all_pred_info_dicts
 
 
-def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10):
+def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10, metric_only=True):
     """
         For each test sentence:
             - Store top 10 predictions for the [MASK] tokens of each model with probabilities
@@ -411,7 +425,7 @@ def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10):
     eval_begin = time.time()
     prediction_info_dict = []
     results = {}
-    progress_bar = tqdm(range(break_after),desc="Batches")
+    progress_bar = tqdm(range(break_after), desc="Batches")
     for step, batch in enumerate(dataloader):
         batch = {k: v.to(device) for k, v in batch.items()}
         num_sents = len(batch["input_ids"])
@@ -427,25 +441,32 @@ def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10):
         model_input_time = round(model_input_end - model_input_begin, 3)
 
         analysis_begin = time.time()
-        pred_info, batch_corrects, batch_ranks, total_masks = analyze_mlm_predictions(tokenizer.tokenizer, batch, preds)
+        if not metric_only:
+            pred_info, batch_corrects, batch_ranks, total_masks = analyze_mlm_predictions(tokenizer.tokenizer, batch,
+                                                                                          preds)
+        else:
+            pred_info, batch_corrects, ranks, total_masks = get_corrects(batch, preds)
         analysis_end = time.time()
         analysis_time = round(analysis_end - analysis_begin, 3)
         print("model input time", model_input_time, " analysis time ", analysis_time)
         progress_bar.update(1)
         for k, c in batch_corrects.items():
             corrects[k] += c
-            ranks[k].extend(batch_ranks[k])
+            if ranks is not None:
+                ranks[k].extend(batch_ranks[k])
         total_examples += total_masks
-        prediction_info_dict.extend(pred_info)
+        if pred_info is not None:
+            prediction_info_dict.extend(pred_info)
         if step > break_after:
             break
     for k in models:
         perplexity = math.exp(np.mean(losses[k]))
-        my_ranks = ranks[k]
-        mrr = np.mean([1 / x for x in my_ranks])
         results[k] = {"perplexity": perplexity,
-                      "accuracy": round(corrects[k] / total_examples, 3),
-                      "mean_reciprocal_rank": round(mrr, 3)}
+                      "accuracy": round(corrects[k] / total_examples, 3)}
+        if not metric_only:
+            my_ranks = ranks[k]
+            mrr = np.mean([1 / x for x in my_ranks])
+            results[k]["mean_reciprocal_rank"] = round(mrr, 3)
     eval_end = time.time()
     eval_time = round(eval_end - eval_begin, 3)
     return results, prediction_info_dict
@@ -567,7 +588,8 @@ def evaluate():
     predinfo_save_path = os.path.join(save_folder, "prediction_info_dict.json")
 
     # results = evaluate_model_perplexity(model_paths, dataset_path)
-    all_results, all_prediction_info_dict = evaluate_multiple_models_mlm_wrapper(model_paths, dataset_path, repeat=args.mlm_eval_repeat)
+    all_results, all_prediction_info_dict = evaluate_multiple_models_mlm_wrapper(model_paths, dataset_path,
+                                                                                 repeat=args.mlm_eval_repeat)
     print(all_results)
     with open(predinfo_save_path, "w") as o:
         json.dump(all_prediction_info_dict, o)
