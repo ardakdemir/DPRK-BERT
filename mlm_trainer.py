@@ -94,12 +94,12 @@ def get_corrects(batch, preds):
     print("{} masked tokens in this batch".format(mask_count))
     correct_dict = {}
     for k, p in preds.items():
-        print("Label shape {} pred shape {}".format(labels.shape, p.shape))
+        # print("Label shape {} pred shape {}".format(labels.shape, p.shape))
         indx = torch.argmax(p, dim=2)
         corrects = torch.sum(indx == labels).detach().cpu().item()
-        print("{}/{} masked tokens are correct for {} ".format(corrects, mask_count, k))
+        # print("{}/{} masked tokens are correct for {} ".format(corrects, mask_count, k))
         correct_dict[k] = corrects
-    return None, correct_dict, None, mask_count
+    return correct_dict, mask_count
 
 
 def analyze_mlm_predictions(tokenizer, batch, preds, topN=10):
@@ -439,16 +439,16 @@ def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10, 
             losses[k].append(outputs.loss.detach().cpu().item())
         model_input_end = time.time()
         model_input_time = round(model_input_end - model_input_begin, 3)
-
+        pred_info, ranks = None, None
         analysis_begin = time.time()
         if not metric_only:
             pred_info, batch_corrects, batch_ranks, total_masks = analyze_mlm_predictions(tokenizer.tokenizer, batch,
                                                                                           preds)
         else:
-            pred_info, batch_corrects, ranks, total_masks = get_corrects(batch, preds)
+            batch_corrects,total_masks = get_corrects(batch, preds)
         analysis_end = time.time()
         analysis_time = round(analysis_end - analysis_begin, 3)
-        print("model input time", model_input_time, " analysis time ", analysis_time)
+        # print("model input time", model_input_time, " analysis time ", analysis_time)
         progress_bar.update(1)
         for k, c in batch_corrects.items():
             corrects[k] += c
