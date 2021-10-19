@@ -135,7 +135,6 @@ def analyze_mlm_predictions(tokenizer, batch, preds, topN=10):
                 # token_probs.sort(key=lambda x: x[1], reverse=True)
                 top_n_preds = tokenizer.convert_ids_to_tokens([x[0] for x in token_probs[:topN]])
                 top_n_probs = [x[1].item() for x in token_probs[:topN]]
-                print("Top n probs: {} ".format(top_n_probs))
                 correct_token_rank = -1
                 for i, tok_prob in enumerate(token_probs):
                     t, p = tok_prob
@@ -151,7 +150,8 @@ def analyze_mlm_predictions(tokenizer, batch, preds, topN=10):
                 model_data = {"correct": correct_token_rank == 1,
                               "correct_prob": correct_prob,
                               "top_n_preds": top_n_preds,
-                              "correct_rank": correct_token_rank}
+                              "correct_rank": correct_token_rank,
+                              "top_n_probs":top_n_probs}
                 if correct_token_rank == 1:  # Top prediction
                     corrects[k] += 1
                 ranks[k].append(correct_token_rank)
