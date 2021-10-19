@@ -595,6 +595,7 @@ def evaluate():
     all_results, all_prediction_info_dict = evaluate_multiple_models_mlm_wrapper(model_paths, dataset_path,
                                                                                  repeat=args.mlm_eval_repeat)
     print(all_results)
+    print("Experiment name ",exp_name)
     with open(predinfo_save_path, "w") as o:
         json.dump(all_prediction_info_dict, o)
     with open(result_save_path, "w") as o:
