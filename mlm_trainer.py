@@ -379,6 +379,7 @@ def evaluate_multiple_models_mlm_wrapper(model_path_dict, dataset_path, repeat=5
     eval_dataset = tokenize_function(raw_datasets["test"], tokenizer)
     args = parse_args()
     break_after = args.validation_steps
+    analyze_preds = args.analyze_preds
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer.tokenizer,
                                                     mlm_probability=args.mlm_probability)
     eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator,
@@ -397,7 +398,7 @@ def evaluate_multiple_models_mlm_wrapper(model_path_dict, dataset_path, repeat=5
     for r in range(repeat):
         print("Starting repeat: {}".format(r))
         results, pred_info_dict = evaluate_multiple_models_mlm(models, eval_dataloader, tokenizer,
-                                                               break_after=break_after)
+                                                               break_after=break_after,metric_only = not analyze_preds)
         all_results[r] = results
         all_pred_info_dicts[r] = pred_info_dict
     return all_results, all_pred_info_dicts
