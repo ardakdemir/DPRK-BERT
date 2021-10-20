@@ -1,0 +1,14 @@
+datasets==1.13.2
+huggingface-hub==0.0.19
+numpy==1.19.5
+pandas==0.25.1
+regex==2021.9.24
+requests==2.25.1
+scikit-learn==0.22.2.post1
+soylemma==0.2.0
+tokenizers==0.9.4
+toolz==0.10.0
+torch==1.7.1
+torchvision==0.8.2
+tqdm==4.62.3
+transformers==4.2.2
