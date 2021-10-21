@@ -14,5 +14,6 @@ VOCAB_PATH = "../kr-bert-pretrained/vocab_snu_char16424.txt"
 mlm_train_json = os.path.join(RODONG_MLM_ROOT,"train.json")
 mlm_validation_json = os.path.join(RODONG_MLM_ROOT,"validation.json")
 
+STOPWORDS_PATH = "misc/korean_stopwords.txt"
 
 OUTPUT_FOLDER = "../experiment_outputs"

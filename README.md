@@ -36,6 +36,6 @@ Then run:
 
     python cooccurrence.py --source_file_path <PATH-TO-INPUT-FILE> --save_folder_path <PATH-TO-THE-FOLDER-TO-STORE-THE-RESULTS> --window_size <WINDOW_SIZE(0 by default)>
     
-Exapmle     
+Example:     
 
     python3 cooccurrence.py --source_file_path ../dprk-bert-data/rodong_mlm_training_data/validation.json --save_folder_path ../cooccurrences_rodong_validation 

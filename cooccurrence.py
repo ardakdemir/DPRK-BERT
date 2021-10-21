@@ -2,7 +2,8 @@ import os
 import json
 from tqdm import tqdm
 from collections import defaultdict
-from utils import get_documents, save_cooccur_to_txt, save_json, get_exp_name
+import config
+from utils import get_documents, save_cooccur_to_txt, save_json, get_exp_name, remove_stopwords
 import argparse
 
 
@@ -29,11 +30,14 @@ def parse_args():
     parser.add_argument(
         "--save_folder_path",
         type=str,
-        default="/Users/ardaakdemir/dprk_research/dprk-bert-data/cooccurrence_news",
+        default="/Users/ardaakdemir/dprk_research/dprk-bert-data/cooccurrence_newyear_2110",
         help="Path to save the cooccurrence dictionary",
     )
     parser.add_argument("--lemmatize", default=False, action="store_true",
                         help="If set, applies lemmatization to the found words")
+    parser.add_argument("--remove_stopwords", default=False, action="store_true",
+                        help="If set, removes/tries to remove the stop words")
+
     parser.add_argument("--analyze", default=False, action="store_true", help="Find pos tags etc.")
     args = parser.parse_args()
     return args
@@ -75,9 +79,14 @@ def main():
     p = args.source_file_path
     save_folder_path = args.save_folder_path
     window = args.window_size
-    word_list = ["일제","일본","핵","남조선","미제"]
+    remove_stops = args.remove_stopwords
+
+    word_list = ["일제", "일본", "핵", "남조선", "미제"]
     skip_list = ["일본새"]
     documents = get_documents(p)
+    if remove_stops:
+        stopwords = {x for x in open(config.STOPWORDS_PATH, 'r').read().split("\n")}
+        documents = remove_stopwords(documents, stopwords, word_list)
     cooccurring_words = cooccurrence(documents, word_list, skip_list, window=window)
     save_cooccur_to_txt(cooccurring_words, save_folder_path)
 
