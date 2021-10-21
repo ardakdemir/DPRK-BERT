@@ -67,6 +67,17 @@ def init_config(config_name=None):
     return config
 
 
+def init_tokenizer(tokenizer_name=None):
+    if tokenizer_name is None:
+        tokenizer = BertTokenizer(config_file.VOCAB_PATH, do_lower_case=False)
+        tokenizer_name = "default"
+    else:
+        tokenizer = BertTokenizer.from_pretrained(tokenizer_name, do_lower_case=False)
+    cleaner = Cleaner()
+    tokenizer = Tokenizer(tokenizer, cleaner)
+    return tokenizer, tokenizer_name
+
+
 def init_mlm_model(config, weight_file_path=None, from_pretrained=False):
     if not from_pretrained:
         if weight_file_path is None:
@@ -81,11 +92,26 @@ def init_mlm_model(config, weight_file_path=None, from_pretrained=False):
         incompatible_keys = model.load_state_dict(weights, strict=False)
         # print(model)
         print("Incompatible keys when loading", incompatible_keys)
+        print("Loaded model from file", model)
         return model
     else:
         model = BertForMaskedLM.from_pretrained(weight_file_path)
-        print(model)
+        print("Loaded model from pretrained", model)
         return model
+
+
+def init_mlm_models_from_dict(model_dicts):
+    models = {}
+    for k, model_dict in model_dicts.items():
+        model_name = model_dict["model_name"]
+        config = model_dict.get("config", None)
+        tokenizer = model_dict.get("tokenizer", None)
+        from_pretrained = model_dict.get("from_pretrained", False)
+        bert_config = init_config(config_name=config)
+        model = init_mlm_model(bert_config, weight_file_path=model_name, from_pretrained=from_pretrained)
+        tokenizer, tokenizer_name = init_tokenizer(tokenizer_name=tokenizer)
+        models[k] = {"config": bert_config, "model": model, "tokenizer": tokenizer, "tokenizer_name": tokenizer_name}
+    return models
 
 
 def get_corrects(batch, preds):
@@ -175,16 +201,6 @@ def analyze_mlm_predictions(tokenizer, batch, preds, topN=10):
     return pred_info, corrects, ranks, np.sum(number_of_masks)
 
 
-def init_tokenizer(tokenizer_name=None):
-    if tokenizer_name is None:
-        tokenizer = BertTokenizer(config_file.VOCAB_PATH, do_lower_case=False)
-    else:
-        tokenizer = BertTokenizer.from_pretrained(tokenizer_name, do_lower_case=False)
-    cleaner = Cleaner()
-    tokenizer = Tokenizer(tokenizer, cleaner)
-    return tokenizer
-
-
 def tokenize_function(examples, tokenizer, max_seq_length=512, text_column_name="data"):
     # Remove empty lines
     examples = [
@@ -207,7 +223,6 @@ def train():
     config = init_config()
     model = init_mlm_model(config)
     tokenizer = init_tokenizer()
-
 
     save_folder = args.save_folder
     if save_folder is None:
@@ -255,7 +270,7 @@ def train():
         train_dataset, shuffle=True, collate_fn=data_collator, batch_size=args.per_device_train_batch_size
     )
     eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size)
-    print("Train size: {}\tEval size: {}".format(len(train_dataloader),len(eval_dataloader)))
+    print("Train size: {}\tEval size: {}".format(len(train_dataloader), len(eval_dataloader)))
     # Optimizer
     # Split weights in two groups, one with weight decay and the other not.
     no_decay = ["bias", "LayerNorm.weight"]
@@ -374,54 +389,47 @@ def evaluate_single_model(model, dataloader, tokenizer=None, break_after=2):
     return perplexity
 
 
-def evaluate_multiple_models_mlm_wrapper(model_path_dict, dataset_path, repeat=5):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    save_path = ""
-    results = defaultdict(list)
-    config = init_config()
-    tokenizer = init_tokenizer()
-    raw_datasets = load_dataset("json", data_files={"test": dataset_path}, field="data")
-    eval_dataset = tokenize_function(raw_datasets["test"], tokenizer)
+def evaluate_multiple_models_mlm_wrapper(model_dicts, dataset_path, repeat=5):
     args = parse_args()
     break_after = args.validation_steps
     analyze_preds = args.analyze_preds
-    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer.tokenizer,
-                                                    mlm_probability=args.mlm_probability)
-    eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator,
-                                 batch_size=args.per_device_eval_batch_size)
-    models = {}
-    for k, model_dict in model_path_dict.items():
-        print("Loading {}...".format(k))
-        model_path = model_dict["model_name"]
-        max_seq_length = args.max_seq_length
-        config_name = model_dict["config_name"]
-        model = init_mlm_model(config, weight_file_path=model_path, from_pretrained=config_name is not None)
-        model.to(device)
-        models[k] = model
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    save_path = ""
+    results = defaultdict(list)
+    raw_datasets = load_dataset("json", data_files={"test": dataset_path}, field="data")
+    dataloaders = {}
+    models = init_mlm_models_from_dict(model_dicts)
+    for k, model_dict in models.items():
+        tokenizer_name = model_dict["tokenizer_name"]
+        if tokenizer_name in dataloaders:
+            continue
+        tokenizer = model_dict["tokenizer"]
+        eval_dataset = tokenize_function(raw_datasets["test"], tokenizer)
+
+        data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer.tokenizer,
+                                                        mlm_probability=args.mlm_probability)
+        eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator,
+                                     batch_size=args.per_device_eval_batch_size)
+        dataloaders[tokenizer_name] = eval_dataloader
     all_results = {}
     all_pred_info_dicts = {}
     for r in range(repeat):
         print("Starting repeat: {}".format(r))
-        results, pred_info_dict = evaluate_multiple_models_mlm(models, eval_dataloader, tokenizer,
-                                                               break_after=break_after,metric_only = not analyze_preds)
+        results, pred_info_dict = mlm_evaluate_multiple(models, dataloaders, break_after=break_after,
+                                                        metric_only=not analyze_preds)
         all_results[r] = results
         all_pred_info_dicts[r] = pred_info_dict
     return all_results, all_pred_info_dicts
 
 
-def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10, metric_only=True):
+def mlm_evaluate_multiple(model_dicts, dataloaders, break_after=10, metric_only=True):
     """
-        For each test sentence:
-            - Store top 10 predictions for the [MASK] tokens of each model with probabilities
-            - Store probabilities and the RANK of the correct token for each model
-    :param models:  dict -> E.g., {"KR-BERT":kr-bert-model, "DPRK-BERT":dprk-bert-model}
-    :param dataloader:
-    :param tokenizer:
-    :param break_after:
-    :return:
+       MLM Evaluation for multiple models
     """
     print("Device {}".format(device))
-    for k, model in models.items():
+    for k, model_dict in model_dicts.items():
+        model = model_dict["model"]
         model.eval()
         model.to(device)
     losses = defaultdict(list)
@@ -431,44 +439,48 @@ def evaluate_multiple_models_mlm(models, dataloader, tokenizer, break_after=10, 
     eval_begin = time.time()
     prediction_info_dict = []
     results = {}
-    progress_bar = tqdm(range(break_after), desc="Batches")
-    for step, batch in enumerate(dataloader):
-        batch = {k: v.to(device) for k, v in batch.items()}
-        num_sents = len(batch["input_ids"])
-        preds = {}
-
-        model_input_begin = time.time()
-        for k, model in models.items():
+    progress_bar = tqdm(range(break_after * len(model_dicts)), desc="Batches for all models")
+    for k, model_dict in model_dicts.items():
+        model = model_dict["model"]
+        tokenizer_name = model_dicts[k]["tokenizer_name"]
+        dataloader = dataloaders[tokenizer_name]
+        for step, batch in enumerate(dataloader):
+            batch = {k: v.to(device) for k, v in batch.items()}
+            num_sents = len(batch["input_ids"])
+            preds = {}
+            model_input_begin = time.time()
+            model = model_dict["model"]
             with torch.no_grad():
                 outputs = model(**batch)
             preds[k] = outputs.logits
-            losses[k].append(round(outputs.loss.detach().cpu().item(),3))
-        model_input_end = time.time()
-        model_input_time = round(model_input_end - model_input_begin, 3)
-        pred_info, batch_ranks = None, None
-        analysis_begin = time.time()
-        if not metric_only:
-            pred_info, batch_corrects, batch_ranks, total_masks = analyze_mlm_predictions(tokenizer.tokenizer, batch,
-                                                                                          preds)
-        else:
-            batch_corrects,total_masks = get_corrects(batch, preds)
-        analysis_end = time.time()
-        analysis_time = round(analysis_end - analysis_begin, 3)
-        # print("model input time", model_input_time, " analysis time ", analysis_time)
-        progress_bar.update(1)
-        for k, c in batch_corrects.items():
-            corrects[k] += c
-            if batch_ranks is not None:
-                ranks[k].extend(batch_ranks[k])
-        total_examples += total_masks
-        if pred_info is not None:
-            prediction_info_dict.extend(pred_info)
-        if step > break_after:
-            break
+            losses[k].append(round(outputs.loss.detach().cpu().item(), 3))
+            model_input_end = time.time()
+            model_input_time = round(model_input_end - model_input_begin, 3)
+            pred_info, batch_ranks = None, None
+            analysis_begin = time.time()
+            if not metric_only:
+                pred_info, batch_corrects, batch_ranks, total_masks = analyze_mlm_predictions(tokenizer.tokenizer,
+                                                                                              batch,
+                                                                                              preds)
+            else:
+                batch_corrects, total_masks = get_corrects(batch, preds)
+            analysis_end = time.time()
+            analysis_time = round(analysis_end - analysis_begin, 3)
+            # print("model input time", model_input_time, " analysis time ", analysis_time)
+            progress_bar.update(1)
+            for k, c in batch_corrects.items():
+                corrects[k] += c
+                if batch_ranks is not None:
+                    ranks[k].extend(batch_ranks[k])
+            total_examples += total_masks
+            if pred_info is not None:
+                prediction_info_dict.extend(pred_info)
+            if step > break_after:
+                break
     for k in models:
         perplexity = math.exp(np.mean(losses[k]))
         results[k] = {"perplexity": perplexity,
-                      "accuracy": 100*round(corrects[k] / total_examples, 3)}
+                      "accuracy": 100 * round(corrects[k] / total_examples, 3)}
         if not metric_only:
             my_ranks = ranks[k]
             mrr = np.mean([1 / x for x in my_ranks])
@@ -577,12 +589,17 @@ def evaluate():
     #                "DPRK-BERT": {"model_name":"../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh",
     #                              "tokenizer":None,"config_name":None}}
     args = parse_args()
-    model_paths = {"KR-BERT": {
+    model_dict = {"KR-BERT": {
         "model_name": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",
         "tokenizer": None,
         "config_name": None},
         "DPRK-BERT": {"model_name": "../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh",
-                      "tokenizer": None, "config_name": None}}
+                      "tokenizer": None, "config_name": None},
+        "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
+                           "tokenizer": "snunlp/KR-Medium",
+                           "config_name": "snunlp/KR-Medium",
+                           "from_pretrained": True}
+    }
     # dataset_path = "../dprk-bert-data/rodong_mlm_training_data/validation.json"
     dataset_path = "../dprk-bert-data/new_year_mlm_data/train.json"
 
@@ -596,12 +613,12 @@ def evaluate():
     result_save_path = os.path.join(save_folder, "results.json")
     experiment_detail_save_path = os.path.join(save_folder, "experiment_details.json")
 
-    experiment_details = {"dataset_path":dataset_path,"model_paths":model_paths}
+    experiment_details = {"dataset_path": dataset_path, "model_dict": model_dict}
     # results = evaluate_model_perplexity(model_paths, dataset_path)
-    all_results, all_prediction_info_dict = evaluate_multiple_models_mlm_wrapper(model_paths, dataset_path,
+    all_results, all_prediction_info_dict = evaluate_multiple_models_mlm_wrapper(model_dict, dataset_path,
                                                                                  repeat=args.mlm_eval_repeat)
     print(all_results)
-    print("Experiment name ",exp_name)
+    print("Experiment name ", exp_name)
     with open(predinfo_save_path, "w") as o:
         json.dump(all_prediction_info_dict, o)
     with open(result_save_path, "w") as o:
