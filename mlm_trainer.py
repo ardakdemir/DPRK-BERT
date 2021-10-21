@@ -219,9 +219,10 @@ def train():
     model = init_mlm_model(config)
     tokenizer = init_tokenizer()
 
+    prefix = "train"
     save_folder = args.save_folder
     if save_folder is None:
-        save_folder = get_exp_name()
+        save_folder = get_exp_name(prefix)
     experiment_folder = os.path.join(config_file.OUTPUT_FOLDER, save_folder)
 
     plot_save_folder = os.path.join(experiment_folder, "plots")
@@ -595,16 +596,12 @@ def evaluate():
                            "from_pretrained": True}
     }
     dataset_path = "../dprk-bert-data/new_year_mlm_data/train.json"
-
     prefix = "comparison"
-    y_label = "perplexity"
 
-    save_folder = args.save_folder
-    if save_folder is None:
-        exp_name = get_exp_name(prefix)
-        print(exp_name)
-        experiment_folder = os.path.join(config_file.OUTPUT_FOLDER, save_folder)
-        save_folder = os.path.join("../experiment_outputs", exp_name)
+    exp_name = get_exp_name(prefix)
+    save_folder = args.save_folder if args.save_folder is not None else exp_name
+    save_folder = os.path.join(config_file.OUTPUT_FOLDER, save_folder)
+    print("Save folder", save_folder)
     if not os.path.exists(save_folder): os.makedirs(save_folder)
 
     predinfo_save_path = os.path.join(save_folder, "prediction_info_dict.json")
