@@ -17,10 +17,10 @@ def parse_args():
         help="The configuration name of the dataset to use (via the datasets library).",
     )
     parser.add_argument(
-        "--plot_save_path",
+        "--save_folder",
         type=str,
         default=None,
-        help="The configuration name of the dataset to use (via the datasets library).",
+        help="Folder name to save experiment outputs. It will default to datetime",
     )
     parser.add_argument(
         "--train_file", type=str, default=config.mlm_train_json,
@@ -83,9 +83,9 @@ def parse_args():
     )
     parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay to use.")
     parser.add_argument("--num_train_epochs", type=int, default=20, help="Total number of training epochs to perform.")
-    parser.add_argument("--mlm_eval_repeat", type=int, default=1, help="Total number of repeats for evaluation.")
+    parser.add_argument("--mlm_eval_repeat", type=int, default=3, help="Total number of repeats for evaluation.")
     parser.add_argument("--analyze_preds",  default=False,action="store_true" ,help="If set, prediction analysis is also done ")
-    parser.add_argument("--validation_steps", type=int, default=10, help="Total number of validation steps on the val set.")
+    parser.add_argument("--validation_steps", type=int, default=500, help="Total number of validation steps on the val set.")
 
     parser.add_argument(
         "--max_train_steps",

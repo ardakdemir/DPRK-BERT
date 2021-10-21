@@ -1,5 +1,6 @@
 from soylemma import Lemmatizer
-
+import mecab
+mecab = mecab.MeCab()
 lemmatizer = Lemmatizer()
 
 def test():
@@ -10,4 +11,4 @@ def test():
         output = func(input)
         print(n,output)
 
-test()
+# test()

@@ -208,7 +208,12 @@ def train():
     model = init_mlm_model(config)
     tokenizer = init_tokenizer()
 
-    experiment_folder = os.path.join(config_file.OUTPUT_FOLDER, get_exp_name())
+
+    save_folder = args.save_folder
+    if save_folder is None:
+        save_folder = get_exp_name()
+    experiment_folder = os.path.join(config_file.OUTPUT_FOLDER, save_folder)
+
     plot_save_folder = os.path.join(experiment_folder, "plots")
     basic_plotter = BasicPlotter(plot_save_folder)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -250,7 +255,7 @@ def train():
         train_dataset, shuffle=True, collate_fn=data_collator, batch_size=args.per_device_train_batch_size
     )
     eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size)
-
+    print("Train size: {}\tEval size: {}".format(len(train_dataloader),len(eval_dataloader)))
     # Optimizer
     # Split weights in two groups, one with weight decay and the other not.
     no_decay = ["bias", "LayerNorm.weight"]
