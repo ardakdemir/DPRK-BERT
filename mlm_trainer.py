@@ -314,8 +314,6 @@ def train():
             outputs = model(**batch)
             loss = outputs.loss
             loss = loss / args.gradient_accumulation_steps
-            logging.info("Loss: {}".format(loss.item()))
-            # print("Loss item: {}".format(loss.item()))
             train_losses.append(loss.item())
             loss.backward()
             if step % args.gradient_accumulation_steps == 0 or step == len(train_dataloader) - 1:
@@ -576,19 +574,16 @@ def evaluate_model_perplexity(model_paths, dataset_path, repeat=5):
 
 
 def evaluate():
-    # model_paths = {"KR-BERT": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",
-    #                "DPRK-BERT": "../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh"}
-    # model_paths = {"mBERT": {"model_name":"bert-base-multilingual-cased",
-    #                          "tokenizer":"bert-base-multilingual-cased",
-    #                          "config_name":"bert-base-multilingual-cased"},
-    #                "DPRK-BERT": {"model_name":"../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh",
-    #                              "tokenizer":None,"config_name":None}}
     args = parse_args()
+    dprk_model_path = "../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh"
+    if args.model_name_or_path is not None:
+        dprk_model_path = args.model_name_or_path
+
     model_dict = {"KR-BERT": {
         "model_name": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",
         "tokenizer": None,
         "config_name": None},
-        "DPRK-BERT": {"model_name": "../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh",
+        "DPRK-BERT": {"model_name": ,
                       "tokenizer": None, "config_name": None},
         "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
                            "tokenizer": "snunlp/KR-Medium",
@@ -599,15 +594,19 @@ def evaluate():
                            "config_name": "bert-base-multilingual-cased",
                            "from_pretrained": True}
     }
-    # dataset_path = "../dprk-bert-data/rodong_mlm_training_data/validation.json"
     dataset_path = "../dprk-bert-data/new_year_mlm_data/train.json"
 
     prefix = "comparison"
-    exp_name = get_exp_name(prefix)
     y_label = "perplexity"
-    print(exp_name)
-    save_folder = os.path.join("../experiment_outputs", exp_name)
+
+    save_folder = args.save_folder
+    if save_folder is None:
+        exp_name = get_exp_name(prefix)
+        print(exp_name)
+        experiment_folder = os.path.join(config_file.OUTPUT_FOLDER, save_folder)
+        save_folder = os.path.join("../experiment_outputs", exp_name)
     if not os.path.exists(save_folder): os.makedirs(save_folder)
+
     predinfo_save_path = os.path.join(save_folder, "prediction_info_dict.json")
     result_save_path = os.path.join(save_folder, "results.json")
     experiment_detail_save_path = os.path.join(save_folder, "experiment_details.json")
