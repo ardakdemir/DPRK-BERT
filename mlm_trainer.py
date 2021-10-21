@@ -117,7 +117,7 @@ def init_mlm_models_from_dict(model_dicts):
 def get_corrects(batch, preds):
     labels = batch["labels"]
     mask_count = torch.sum(labels != -100).detach().cpu().item()
-    print("{} masked tokens in this batch".format(mask_count))
+    # print("{} masked tokens in this batch".format(mask_count))
     correct_dict = {}
     for k, p in preds.items():
         # print("Label shape {} pred shape {}".format(labels.shape, p.shape))
@@ -182,11 +182,6 @@ def analyze_mlm_predictions(tokenizer, batch, preds, topN=10):
                         correct_token_rank = i + 1  # 0 indexed
                         correct_prob = float(p.item())
                         break
-                # print("Model name: {} correct word: {} correct_prob {} correct_rank {} top_n_preds {} ".format(k,
-                #                                                                                                correct_word,
-                #                                                                                                correct_prob,
-                #                                                                                                correct_token_rank,
-                #                                                                                                top_n_preds))
                 model_data = {"correct": correct_token_rank == 1,
                               "correct_prob": correct_prob,
                               "top_n_preds": top_n_preds,
@@ -435,7 +430,7 @@ def mlm_evaluate_multiple(model_dicts, dataloaders, break_after=10, metric_only=
     losses = defaultdict(list)
     corrects = defaultdict(int)
     ranks = defaultdict(list)
-    total_examples = 0
+    total_examples = defaultdict(int)
     eval_begin = time.time()
     prediction_info_dict = []
     results = {}
@@ -472,15 +467,15 @@ def mlm_evaluate_multiple(model_dicts, dataloaders, break_after=10, metric_only=
                 corrects[k] += c
                 if batch_ranks is not None:
                     ranks[k].extend(batch_ranks[k])
-            total_examples += total_masks
+            total_examples[k] += total_masks
             if pred_info is not None:
                 prediction_info_dict.extend(pred_info)
             if step > break_after:
                 break
-    for k in models:
+    for k in model_dicts:
         perplexity = math.exp(np.mean(losses[k]))
-        results[k] = {"perplexity": perplexity,
-                      "accuracy": 100 * round(corrects[k] / total_examples, 3)}
+        results[k] = {"perplexity": round(perplexity,3),
+                      "accuracy":  round(100 *corrects[k] / total_examples[k], 3)}
         if not metric_only:
             my_ranks = ranks[k]
             mrr = np.mean([1 / x for x in my_ranks])
@@ -598,6 +593,10 @@ def evaluate():
         "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
                            "tokenizer": "snunlp/KR-Medium",
                            "config_name": "snunlp/KR-Medium",
+                           "from_pretrained": True},
+        "mBERT": {"model_name": "bert-base-multilingual-cased",
+                           "tokenizer": "bert-base-multilingual-cased",
+                           "config_name": "bert-base-multilingual-cased",
                            "from_pretrained": True}
     }
     # dataset_path = "../dprk-bert-data/rodong_mlm_training_data/validation.json"
