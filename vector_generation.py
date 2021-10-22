@@ -4,7 +4,7 @@ from document import Document, Sentence
 import torch
 from utils import get_document_objects, save_objects_to_pickle,load_pickle
 from mlm_trainer import init_mlm_models_from_dict
-
+from tqdm import tqdm
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
