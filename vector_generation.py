@@ -63,7 +63,7 @@ def generate_vectors_test():
     documents = load_pickle(save_path)
     sentence = documents[0].sentences[0]
     print("{} documents {} sentences".format(len(documents),len(documents[0].sentences)))
-    print("Sentence id"sentence.sentence_id)
+    print("Sentence id",sentence.sentence_id)
     print("Sentence metadata",sentence.metadata)
     print(len(sentence.vectors))
 
