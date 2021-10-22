@@ -17,3 +17,5 @@ mlm_validation_json = os.path.join(RODONG_MLM_ROOT,"validation.json")
 STOPWORDS_PATH = "misc/korean_stopwords.txt"
 
 OUTPUT_FOLDER = "../experiment_outputs"
+
+

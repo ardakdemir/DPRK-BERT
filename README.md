@@ -3,9 +3,17 @@
 An attempt to develop the first open-source DPRK (North Korea) Korean language model.  
 
 
-Assuming that the files and paths are arranged accordingly.
+
+
+## Datasets
+
+Rodong Sinmun dataset and the trained DPRK-BERT model can be found in [drive](https://drive.google.com/drive/folders/1VGDc8NtaYVrsxDe1f1JV8gbw1juvyIlA?usp=sharing).  
+We refrain from sharing New year addresses as authentification is required for accessing them.
+Please, contact authors about the New year addresses.
 
 ## Language Model 
+
+***Note.*** Assuming that the files and paths are arranged accordingly.
 
 ***Train.***
 
