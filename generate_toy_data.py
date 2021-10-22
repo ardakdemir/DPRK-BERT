@@ -16,8 +16,8 @@ def generate_toy_data(source, destination, size=10):
 
 
 def main():
-    source = "/Users/ardaakdemir/dprk_research/dprk-bert-data/rodong_mlm_training_data/train.json"
-    destination = "/Users/ardaakdemir/dprk_research/dprk-bert-data/rodong_mlm_training_data/train_toy.json"
+    source = "/Users/ardaakdemir/dprk_research/dprk-bert-data/rodong_all_data_2210/train.json"
+    destination = "/Users/ardaakdemir/dprk_research/dprk-bert-data/rodong_all_data_2210/train_toy.json"
 
     generate_toy_data(source, destination, size=10)
 

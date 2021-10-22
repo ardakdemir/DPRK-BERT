@@ -58,12 +58,11 @@ def init_config(config_name=None):
     if not config_name:
         with open(config_file.CONFIG_FILE_PATH, "rb") as r:
             config_dict = json.load(r)
-        print("Loaded config", config_dict)
         config = BertConfig(**config_dict)
-        print(config)
+        print("Bert Config", config)
     else:
         config = BertConfig.from_pretrained(config_name)
-        print(config)
+        print("Bert Config",config)
     return config
 
 
@@ -297,8 +296,6 @@ def train():
     )
 
     total_batch_size = args.per_device_train_batch_size * args.gradient_accumulation_steps
-
-    logging.info("Starting training")
 
     progress_bar = tqdm(range(args.max_train_steps))
     completed_steps = 0

@@ -29,7 +29,7 @@ def parse_args():
         type=str,
         default="rodong",
         choices=["rodong", "new_year"],
-    help = "Type of data for preparation",
+        help="Type of data for preparation",
     )
     parser.add_argument(
         "--apply_split",
@@ -58,6 +58,7 @@ def parse_args():
     args = parser.parse_args()
     return args
 
+
 def prepare_newyear_data(source_folder, save_folder, split=0.8):
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
@@ -68,17 +69,22 @@ def prepare_newyear_data(source_folder, save_folder, split=0.8):
         year = file_name.split(".")[0]
         with open(p, "r") as r:
             d = r.read()
-        print(d)
-        my_data = {"id":year,"data":d,"date":year}
+        my_data = {"id": year,
+                   "data": d,
+                   "date": year,
+                   "year":int(year),
+                   "type": "newyear_speech",
+                   "source": "newyear"}
         data.append(my_data)
     t = int(len(data) * split)
     tuples = [('train.json', data[:t]), ('validation.json', data[t:])]
     for tup in tuples:
-        if len(tup[1])>0:
+        if len(tup[1]) > 0:
             with open(os.path.join(save_folder, tup[0]), "w") as o:
                 json.dump({"data": tup[1]}, o)
         else:
             print('no data for {} split'.format(tup[0].split(".")[0]))
+
 
 def get_all_day_data(source_folder, save_folder, split=0.8):
     if not os.path.exists(save_folder):
@@ -91,7 +97,12 @@ def get_all_day_data(source_folder, save_folder, split=0.8):
             values = list(d.values())
             new_values = []
             for v in values:
-                my_v = {"id": v["news_id"], "date": v["date"], "title": v["title"]}
+                my_v = {"id": v["news_id"],
+                        "date": v["date"],
+                        "year":int(v["date"].split("-")[0]),
+                        "title": v["title"],
+                        "source": "rodong",
+                        "type": v["type"]}
                 if v["type"] == "news_article":
                     my_v["data"] = v["article"]
                 else:
@@ -101,7 +112,7 @@ def get_all_day_data(source_folder, save_folder, split=0.8):
     t = int(len(data) * split)
     tuples = [('train.json', data[:t]), ('validation.json', data[t:])]
     for tup in tuples:
-        if len(tup[1])>0:
+        if len(tup[1]) > 0:
             with open(os.path.join(save_folder, tup[0]), "w") as o:
                 json.dump({"data": tup[1]}, o)
         else:
@@ -120,6 +131,7 @@ def main():
         get_all_day_data(source_folder, save_folder, split=split_ratio if apply_split else 1)
     elif input_type == "new_year":
         prepare_newyear_data(source_folder, save_folder, split=split_ratio if apply_split else 1)
+
 
 if __name__ == "__main__":
     main()
