@@ -18,7 +18,7 @@ def generate_vectors(document_objects, model_dicts, device):
     for k, model_dict in model_dicts.items():
         model_dict["model"].to(device)
         model_dict["model"].eval()
-    progress_bar = tqdm(range(len(documents)*len(model_dicts)),desc="Step")
+    progress_bar = tqdm(range(len(document_objects)*len(model_dicts)),desc="Step")
     for document in document_objects:
         for sentence in document.sentences:
             raw_sentence = sentence.raw_sentence
