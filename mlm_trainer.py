@@ -217,7 +217,7 @@ def train():
     args = parse_args()
     config = init_config()
     model = init_mlm_model(config)
-    tokenizer = init_tokenizer()
+    tokenizer,tokenizer_name = init_tokenizer()
 
     prefix = "train"
     save_folder = args.save_folder
@@ -488,7 +488,7 @@ def evaluate_samemodels(model_paths, dataset_path, repeat=5):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     results = defaultdict(list)
     config = init_config()
-    tokenizer = init_tokenizer()
+    tokenizer,tokenizer_name = init_tokenizer()
     raw_datasets = load_dataset("json", data_files={"test": dataset_path}, field="data")
     eval_dataset = tokenize_function(raw_datasets["test"], tokenizer)
     args = parse_args()
@@ -533,7 +533,7 @@ def evaluate_model_perplexity(model_paths, dataset_path, repeat=5):
             tokenizer = model_dict["tokenizer"]
             model_path = model_dict["model_name"]
             config = init_config(config_name)
-            tokenizer = init_tokenizer(tokenizer)
+            tokenizer,tokenizer_name = init_tokenizer(tokenizer)
             raw_datasets = load_dataset("json", data_files={"test": dataset_path}, field="data")
             args = parse_args()
             eval_dataset = tokenize_function(raw_datasets["test"], tokenizer)
@@ -584,7 +584,7 @@ def evaluate():
         "model_name": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",
         "tokenizer": None,
         "config_name": None},
-        "DPRK-BERT": {"model_name": ,
+        "DPRK-BERT": {"model_name":dprk_model_path ,
                       "tokenizer": None, "config_name": None},
         "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
                            "tokenizer": "snunlp/KR-Medium",
