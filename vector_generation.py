@@ -96,7 +96,7 @@ def generate_word_vectors(word_list, model_dicts, device):
                     0].detach().cpu().numpy()  # last layer's first sentence's first token output
                 word_vectors[word][k] = v
             progress_bar.update(1)
-    return document_objects
+    return word_vectors
 
 
 def generate_noun_vectors_caller(source_json_path, save_path):
