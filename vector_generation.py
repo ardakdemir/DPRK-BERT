@@ -22,13 +22,13 @@ def parse_args():
     parser.add_argument(
         "--source_json_path",
         type=str,
-        default="../dprk-bert-data/new_year_mlm_data/train.json",
+        default="../dprk-bert-data/rodong_mlm_training_data/train_toy.json",
         help="Source folder containing all data",
     )
     parser.add_argument(
         "--save_path",
         type=str,
-        default="../dprk-bert-data/newyear_document_vectors.pkl",
+        default="../dprk-bert-data/rodong_toy_document_vectors.pkl",
         help="Save folder for dataset",
     )
     args = parser.parse_args()
@@ -54,7 +54,7 @@ def generate_vectors(document_objects, model_dicts, device):
         for sentence in document_sentences:
             raw_sentence = sentence.raw_sentence
             for k, model_dict in model_dicts.items():
-                max_seq_length = model_dict["bert_config"].get("max_position_embeddings",512)
+                max_seq_length = getattr(model_dict["config"],"max_position_embeddings",512)
                 batch = model_dict["tokenizer"].tokenize(raw_sentence, {"truncation": True,
                                                                         "max_length": max_seq_length})
                 model = model_dict["model"]
