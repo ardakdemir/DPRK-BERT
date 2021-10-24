@@ -54,6 +54,7 @@ def generate_vectors(document_objects, model_dicts, device):
         for sentence in document_sentences:
             raw_sentence = sentence.raw_sentence
             for k, model_dict in model_dicts.items():
+                max_seq_length = model_dict["bert_config"].get("max_position_embeddings",512)
                 batch = model_dict["tokenizer"].tokenize(raw_sentence, {"truncation": True,
                                                                         "max_length": max_seq_length})
                 model = model_dict["model"]

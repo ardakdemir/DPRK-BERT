@@ -109,7 +109,10 @@ def init_mlm_models_from_dict(model_dicts):
         bert_config = init_config(config_name=config)
         model = init_mlm_model(bert_config, weight_file_path=model_name, from_pretrained=from_pretrained)
         tokenizer, tokenizer_name = init_tokenizer(tokenizer_name=tokenizer)
-        models[k] = {"config": bert_config, "model": model, "tokenizer": tokenizer, "tokenizer_name": tokenizer_name}
+        models[k] = {"config": bert_config,
+                     "model": model,
+                     "tokenizer": tokenizer,
+                     "tokenizer_name": tokenizer_name}
     return models
 
 
