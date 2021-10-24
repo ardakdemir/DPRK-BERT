@@ -45,6 +45,14 @@ For all Rodong sentences:
 python3 vector_generation.py --source_json_path ../dprk-bert-data/rodong_mlm_training_data/rodong_all.json --save_path ../dprk-bert-data/rodong_all_document_vectors.pkl
 ```
 
+For all New year NOUNs:
+
+```
+python3 vector_generation.py --action store_nouns --source_json_path ../dprk-bert-data/new_year_mlm_data/train.json --save_path ../dprk-bert-data/newyear_nouns.pkl
+
+```
+
+
 ## Text Analysis
 
 

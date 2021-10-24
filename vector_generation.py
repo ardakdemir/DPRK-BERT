@@ -6,6 +6,7 @@ from utils import get_document_objects, save_objects_to_pickle, load_pickle
 from mlm_trainer import init_mlm_models_from_dict
 from tqdm import tqdm
 import argparse
+from collections import defaultdict
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -13,10 +14,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 def parse_args():
     parser = argparse.ArgumentParser(description="Generate json datasets for mlm training/testing ")
     parser.add_argument(
-        "--input_type",
+        "--action",
         type=str,
-        default="rodong",
-        choices=["rodong", "new_year"],
+        default="store_documents",
+        choices=["store_documents", "store_nouns"],
         help="Type of data for preparation",
     )
     parser.add_argument(
@@ -35,7 +36,7 @@ def parse_args():
     return args
 
 
-def generate_vectors(document_objects, model_dicts, device):
+def generate_sentence_vectors(document_objects, model_dicts, device):
     """
         For each sentence generate a feature vector using all models
     :param sentence_objects:
@@ -54,7 +55,7 @@ def generate_vectors(document_objects, model_dicts, device):
         for sentence in document_sentences:
             raw_sentence = sentence.raw_sentence
             for k, model_dict in model_dicts.items():
-                max_seq_length = getattr(model_dict["config"],"max_position_embeddings",512)
+                max_seq_length = getattr(model_dict["config"], "max_position_embeddings", 512)
                 batch = model_dict["tokenizer"].tokenize(raw_sentence, {"truncation": True,
                                                                         "max_length": max_seq_length})
                 model = model_dict["model"]
@@ -69,7 +70,70 @@ def generate_vectors(document_objects, model_dicts, device):
     return document_objects
 
 
-def generate_vectors_test(documents_json_path, save_path):
+def generate_word_vectors(word_list, model_dicts, device):
+    """
+        For each sentence generate a feature vector using all models
+    :param sentence_objects:
+    :param model_dicts:
+    :return:
+    """
+    for k, model_dict in model_dicts.items():
+        model_dict["model"].to(device)
+        model_dict["model"].eval()
+    progress_bar = tqdm(range(len(word_list) * len(model_dicts)), desc="Step")
+    word_vectors = defaultdict(dict)
+    for word in word_list:
+        for k, model_dict in model_dicts.items():
+            max_seq_length = getattr(model_dict["config"], "max_position_embeddings", 512)
+            batch = model_dict["tokenizer"].tokenize(word, {"truncation": True,
+                                                                    "max_length": max_seq_length})
+            model = model_dict["model"]
+            with torch.no_grad():
+                batch = {k: torch.tensor(v).unsqueeze(0).to(device) for k, v in batch.items()}
+                outputs = model(**batch, output_hidden_states=True)
+                hidden_states = outputs.hidden_states
+                v = hidden_states[-1][0][
+                    0].detach().cpu().numpy()  # last layer's first sentence's first token output
+                word_vectors[word][k] = v
+            progress_bar.update(1)
+    return document_objects
+
+
+def generate_noun_vectors_caller(source_json_path, save_path):
+    dprk_model_path = "../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh"
+    model_dict = {"KR-BERT": {
+        "model_name": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",
+        "tokenizer": None,
+        "config_name": None},
+        "DPRK-BERT": {"model_name": dprk_model_path,
+                      "tokenizer": None, "config_name": None},
+        "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
+                           "tokenizer": "snunlp/KR-Medium",
+                           "config_name": "snunlp/KR-Medium",
+                           "from_pretrained": True},
+        "mBERT": {"model_name": "bert-base-multilingual-cased",
+                  "tokenizer": "bert-base-multilingual-cased",
+                  "config_name": "bert-base-multilingual-cased",
+                  "from_pretrained": True}
+    }
+    print("initializing the models...")
+    model_dicts = init_mlm_models_from_dict(model_dict)
+    document_objects = get_document_objects(source_json_path)
+    all_nouns = list(set([n for d in document_objects for n in d.nouns]))
+    print("{} documents and {} nouns.".format(len(document_objects), len(all_nouns)))
+    word_vectors = generate_word_vectors(all_nouns, model_dicts, device)
+    print("Saving word vectors to ", save_path)
+    save_objects_to_pickle(word_vectors, save_path)
+
+    documents = load_pickle(save_path)
+    sentence = documents[0].sentences[0]
+    print("{} documents {} sentences".format(len(documents), len(documents[0].sentences)))
+    print("Sentence id", sentence.sentence_id)
+    print("Sentence metadata", sentence.metadata)
+    print(len(sentence.vectors))
+
+
+def generate_sentence_vectors_test(documents_json_path, save_path):
     dprk_model_path = "../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh"
     model_dict = {"KR-BERT": {
         "model_name": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",
@@ -89,7 +153,7 @@ def generate_vectors_test(documents_json_path, save_path):
     print("initializing the models...")
     model_dicts = init_mlm_models_from_dict(model_dict)
     document_objects = get_document_objects(documents_json_path)
-    document_objects = generate_vectors(document_objects, model_dicts, device)
+    document_objects = generate_sentence_vectors(document_objects, model_dicts, device)
 
     print("Saving sentence vectors to ", save_path)
     save_objects_to_pickle(document_objects, save_path)
@@ -106,7 +170,11 @@ def main():
     args = parse_args()
     source_json_path = args.source_json_path
     save_path = args.save_path
-    generate_vectors_test(source_json_path, save_path)
+    action = args.action
+    if action == "store_documents":
+        generate_sentence_vectors_test(source_json_path, save_path)
+    elif action == "store_nouns":
+        generate_noun_vectors_caller(source_json_path, save_path)
 
 
 if __name__ == "__main__":
