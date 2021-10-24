@@ -47,10 +47,15 @@ def generate_vectors(document_objects, model_dicts, device):
         model_dict["model"].eval()
     progress_bar = tqdm(range(len(document_objects) * len(model_dicts)), desc="Step")
     for document in document_objects:
-        for sentence in document.sentences:
+        document_sentences = document.get_sentences()
+        document_id = document.get_id()
+        num_sents = len(document_sentences)
+        print("{} sentences for {}".format(num_sents, document_id))
+        for sentence in document_sentences:
             raw_sentence = sentence.raw_sentence
             for k, model_dict in model_dicts.items():
-                batch = model_dict["tokenizer"].tokenize(raw_sentence)
+                batch = model_dict["tokenizer"].tokenize(raw_sentence, {"truncation": True,
+                                                                        "max_length": max_seq_length})
                 model = model_dict["model"]
                 with torch.no_grad():
                     batch = {k: torch.tensor(v).unsqueeze(0).to(device) for k, v in batch.items()}
@@ -85,7 +90,7 @@ def generate_vectors_test(documents_json_path, save_path):
     document_objects = get_document_objects(documents_json_path)
     document_objects = generate_vectors(document_objects, model_dicts, device)
 
-    print("Saving sentence vectors to ",save_path)
+    print("Saving sentence vectors to ", save_path)
     save_objects_to_pickle(document_objects, save_path)
 
     documents = load_pickle(save_path)

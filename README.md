@@ -29,6 +29,21 @@ For 5 folds, each fold with 500 batches (per_device_eval_batch_size=8 by default
 python3 mlm_trainer.py --mode evaluate --mlm_eval_repeat 5 --validation_steps 500
 ```
 
+***Generate sentence vectors using language models***
+
+Generate sentence embeddings for each sentence using LMs and store in a pickle (.pkl) file.  
+Currently, we generate sentence vectors for four different BERT-based LMs:
+
+- KR-BERT
+- KR-BERT-MEDIUM
+- DPRK-BERT (our model)
+- mBERT (multilingual BERT) model
+
+For all Rodong sentences:
+
+```
+python3 vector_generation.py --source_json_path ../dprk-bert-data/rodong_mlm_training_data/rodong_all.json --save_path ../dprk-bert-data/rodong_all_document_vectors.pkl
+```
 
 ## Text Analysis
 
@@ -47,3 +62,4 @@ Then run:
 Example:     
 
     python3 cooccurrence.py --source_file_path ../dprk-bert-data/rodong_mlm_training_data/validation.json --save_folder_path ../cooccurrences_rodong_validation 
+    
