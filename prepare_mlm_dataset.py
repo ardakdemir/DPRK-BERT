@@ -2,8 +2,6 @@ import os
 import json
 from tqdm import tqdm
 import argparse
-
-import argparse
 import config
 
 """
