@@ -7,11 +7,11 @@ from collections import Counter
 
 
 lemmatizer = Lemmatizer()
-kkma = Kkma()
+# kkma = Kkma()
 
 
 def get_nouns(sentences):
-    return [kkma.nouns(s) for s in sentences]
+    return [s for s in sentences.split()]
 
 
 def test():
