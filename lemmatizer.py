@@ -37,7 +37,7 @@ def test_kkma():
 
 def main():
     # test_kkma()
-    sentences = ["조선민주주의인민공화국에 대한 시대착오적 적대시 정책 ", "조선민주주의인민공화국에 대한 시대착오적 적대시 정책 "]
+    sentences = ["고립되어 가고 있습니"]
     nouns = [x for y in get_nouns(sentences) for x in y]
     noun_counts = Counter(nouns)
     print(noun_counts)

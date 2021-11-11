@@ -12,3 +12,4 @@ torch==1.7.1
 torchvision==0.8.2
 tqdm==4.62.3
 transformers==4.2.2
+tweepy==3.1.0

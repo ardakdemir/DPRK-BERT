@@ -41,6 +41,12 @@ def parse_args():
         help="If passed, pad all samples to `max_length`. Otherwise, dynamic padding is used.",
     )
     parser.add_argument(
+        "--train_from_scratch",
+        action="store_true",
+        default=False,
+        help="If passed, train a mlm model from scratch.",
+    )
+    parser.add_argument(
         "--model_name_or_path",
         type=str,
         default=None,
@@ -59,6 +65,13 @@ def parse_args():
         default=None,
         help="Pretrained tokenizer name or path if not the same as model_name",
     )
+    parser.add_argument(
+        "--vocab_path",
+        type=str,
+        default=None,
+        help="Pretrained tokenizer vocabulary. Overrides config",
+    )
+
     parser.add_argument(
         "--use_slow_tokenizer",
         action="store_true",

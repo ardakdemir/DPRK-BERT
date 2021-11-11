@@ -2,12 +2,14 @@ import os
 
 import numpy as np
 from lemmatizer import get_nouns
+from cleaner import Cleaner
 
+cleaner = Cleaner()
 
 class Sentence:
     def __init__(self, raw_sentence, kwargs={}):
         self.raw_sentence = raw_sentence
-        self.nouns = get_nouns([raw_sentence])[0]
+        self.nouns = get_nouns([cleaner.clean(raw_sentence)])[0]
         self.vectors = {}  # {"model_name": <vector>}
         try:
             self.document_id = kwargs["document_id"]

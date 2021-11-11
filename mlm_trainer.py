@@ -35,8 +35,6 @@ from transformers import (BertConfig, BertModel,
 logging.basicConfig(filename=config_file.LOG_FILE_PATH, level=logging.DEBUG)
 # logger = logging.getLogger(__name__)
 
-vocab_file_path = "../kr-bert-pretrained/vocab_snu_char16424.pkl"
-weight_file_path = "../kr-bert-pretrained/pytorch_model_char16424_bert.bin"
 config_file_path = "../kr-bert-pretrained/bert_config_char16424.json"
 vocab_path = "../kr-bert-pretrained/vocab_snu_char16424.txt"
 
@@ -62,37 +60,45 @@ def init_config(config_name=None):
         print("Bert Config", config)
     else:
         config = BertConfig.from_pretrained(config_name)
-        print("Bert Config",config)
+        print("Bert Config", config)
     return config
 
 
-def init_tokenizer(tokenizer_name=None):
-    if tokenizer_name is None:
+def init_tokenizer(tokenizer_name_or_path=None, from_pretrained=True):
+    if tokenizer_name_or_path is None and default:
         tokenizer = BertTokenizer(config_file.VOCAB_PATH, do_lower_case=False)
-        tokenizer_name = "default"
+        tokenizer_name_or_path = "default"
     else:
-        tokenizer = BertTokenizer.from_pretrained(tokenizer_name, do_lower_case=False)
+        if from_pretrained:
+            tokenizer = BertTokenizer.from_pretrained(tokenizer_name_or_path, do_lower_case=False)
+        else:
+            tokenizer = BertTokenizer(tokenizer_name_or_path, do_lower_case=False)
     cleaner = Cleaner()
     tokenizer = Tokenizer(tokenizer, cleaner)
-    return tokenizer, tokenizer_name
+    return tokenizer, tokenizer_name_or_path
 
 
-def init_mlm_model(config, weight_file_path=None, from_pretrained=False):
+def init_mlm_model(config, weight_file_path=None, from_pretrained=False, from_scratch=False):
     if not from_pretrained:
-        if weight_file_path is None:
-            weight_file_path = config_file.WEIGHT_FILE_PATH
-        weights = torch.load(weight_file_path, map_location="cpu")
         model = BertForMaskedLM(config)
-        model_name = os.path.split(weight_file_path)[-1]
-        if model_name == KR_BERT_MODEL_NAME:
-            print("Changing cls decoder to not have bias!!")
-            model.cls.predictions.decoder = torch.nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+        if from_scratch:
+            print("Using randomly initialized BERT model for mlm....")
+            return model
+        else:
+            print("Loading weights from a BERT checkpoint for mlm...")
+            model_name = os.path.split(weight_file_path)[-1]
+            if weight_file_path is None:
+                weight_file_path = config_file.WEIGHT_FILE_PATH
+            weights = torch.load(weight_file_path, map_location="cpu")
+            if model_name == KR_BERT_MODEL_NAME:
+                print("Changing cls decoder to not have bias!!")
+                model.cls.predictions.decoder = torch.nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
-        incompatible_keys = model.load_state_dict(weights, strict=False)
-        # print(model)
-        print("Incompatible keys when loading", incompatible_keys)
-        print("Loaded model from file", model)
-        return model
+            incompatible_keys = model.load_state_dict(weights, strict=False)
+            # print(model)
+            print("Incompatible keys when loading", incompatible_keys)
+            print("Loaded model from file", model)
+            return model
     else:
         model = BertForMaskedLM.from_pretrained(weight_file_path)
         print("Loaded model from pretrained", model)
@@ -217,9 +223,14 @@ def tokenize_function(examples, tokenizer, max_seq_length=512, text_column_name=
 
 def train():
     args = parse_args()
-    config = init_config()
-    model = init_mlm_model(config)
-    tokenizer,tokenizer_name = init_tokenizer()
+    train_from_scratch = args.train_from_scratch
+    config_path = args.config_name
+    tokenizer_name = args.tokenizer_name
+
+    config = init_config(config_path)
+    model = init_mlm_model(config, from_scratch=train_from_scratch)
+    tokenizer, tokenizer_name = init_tokenizer(tokenizer_name_or_path=tokenizer_name,
+                                               from_pretrained=not train_from_scratch)
 
     prefix = "train"
     save_folder = args.save_folder
@@ -473,8 +484,8 @@ def mlm_evaluate_multiple(model_dicts, dataloaders, break_after=10, metric_only=
                 break
     for k in model_dicts:
         perplexity = math.exp(np.mean(losses[k]))
-        results[k] = {"perplexity": round(perplexity,3),
-                      "accuracy":  round(100 *corrects[k] / total_examples[k], 3)}
+        results[k] = {"perplexity": round(perplexity, 3),
+                      "accuracy": round(100 * corrects[k] / total_examples[k], 3)}
         if not metric_only:
             my_ranks = ranks[k]
             mrr = np.mean([1 / x for x in my_ranks])
@@ -488,7 +499,7 @@ def evaluate_samemodels(model_paths, dataset_path, repeat=5):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     results = defaultdict(list)
     config = init_config()
-    tokenizer,tokenizer_name = init_tokenizer()
+    tokenizer, tokenizer_name = init_tokenizer()
     raw_datasets = load_dataset("json", data_files={"test": dataset_path}, field="data")
     eval_dataset = tokenize_function(raw_datasets["test"], tokenizer)
     args = parse_args()
@@ -533,7 +544,7 @@ def evaluate_model_perplexity(model_paths, dataset_path, repeat=5):
             tokenizer = model_dict["tokenizer"]
             model_path = model_dict["model_name"]
             config = init_config(config_name)
-            tokenizer,tokenizer_name = init_tokenizer(tokenizer)
+            tokenizer, tokenizer_name = init_tokenizer(tokenizer)
             raw_datasets = load_dataset("json", data_files={"test": dataset_path}, field="data")
             args = parse_args()
             eval_dataset = tokenize_function(raw_datasets["test"], tokenizer)
@@ -584,16 +595,16 @@ def evaluate():
         "model_name": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",
         "tokenizer": None,
         "config_name": None},
-        "DPRK-BERT": {"model_name":dprk_model_path ,
+        "DPRK-BERT": {"model_name": dprk_model_path,
                       "tokenizer": None, "config_name": None},
         "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
                            "tokenizer": "snunlp/KR-Medium",
                            "config_name": "snunlp/KR-Medium",
                            "from_pretrained": True},
         "mBERT": {"model_name": "bert-base-multilingual-cased",
-                           "tokenizer": "bert-base-multilingual-cased",
-                           "config_name": "bert-base-multilingual-cased",
-                           "from_pretrained": True}
+                  "tokenizer": "bert-base-multilingual-cased",
+                  "config_name": "bert-base-multilingual-cased",
+                  "from_pretrained": True}
     }
     dataset_path = "../dprk-bert-data/new_year_mlm_data/train.json"
     prefix = "comparison"

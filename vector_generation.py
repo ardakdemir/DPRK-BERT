@@ -2,7 +2,7 @@ import pickle as pkl
 import numpy as np
 from document import Document, Sentence
 import torch
-from utils import get_document_objects, save_objects_to_pickle, load_pickle
+from utils import get_document_objects, save_objects_to_pickle, load_pickle, get_google_translations
 from mlm_trainer import init_mlm_models_from_dict
 from tqdm import tqdm
 import argparse
@@ -86,7 +86,7 @@ def generate_word_vectors(word_list, model_dicts, device):
         for k, model_dict in model_dicts.items():
             max_seq_length = getattr(model_dict["config"], "max_position_embeddings", 512)
             batch = model_dict["tokenizer"].tokenize(word, {"truncation": True,
-                                                                    "max_length": max_seq_length})
+                                                            "max_length": max_seq_length})
             model = model_dict["model"]
             with torch.no_grad():
                 batch = {k: torch.tensor(v).unsqueeze(0).to(device) for k, v in batch.items()}
@@ -101,20 +101,24 @@ def generate_word_vectors(word_list, model_dicts, device):
 
 def generate_noun_vectors_caller(source_json_path, save_path):
     dprk_model_path = "../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh"
-    model_dict = {"KR-BERT": {
-        "model_name": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",
-        "tokenizer": None,
-        "config_name": None},
+    # model_dict = {"KR-BERT": {
+    #     "model_name": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",
+    #     "tokenizer": None,
+    #     "config_name": None},
+    #     "DPRK-BERT": {"model_name": dprk_model_path,
+    #                   "tokenizer": None, "config_name": None},
+    #     "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
+    #                        "tokenizer": "snunlp/KR-Medium",
+    #                        "config_name": "snunlp/KR-Medium",
+    #                        "from_pretrained": True},
+    #     "mBERT": {"model_name": "bert-base-multilingual-cased",
+    #               "tokenizer": "bert-base-multilingual-cased",
+    #               "config_name": "bert-base-multilingual-cased",
+    #               "from_pretrained": True}
+    # }
+    model_dict = {
         "DPRK-BERT": {"model_name": dprk_model_path,
-                      "tokenizer": None, "config_name": None},
-        "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
-                           "tokenizer": "snunlp/KR-Medium",
-                           "config_name": "snunlp/KR-Medium",
-                           "from_pretrained": True},
-        "mBERT": {"model_name": "bert-base-multilingual-cased",
-                  "tokenizer": "bert-base-multilingual-cased",
-                  "config_name": "bert-base-multilingual-cased",
-                  "from_pretrained": True}
+                      "tokenizer": None, "config_name": None}
     }
     print("initializing the models...")
     model_dicts = init_mlm_models_from_dict(model_dict)
@@ -122,15 +126,26 @@ def generate_noun_vectors_caller(source_json_path, save_path):
     all_nouns = list(set([n for d in document_objects for n in d.nouns]))
     print("{} documents and {} nouns.".format(len(document_objects), len(all_nouns)))
     word_vectors = generate_word_vectors(all_nouns, model_dicts, device)
-    print("Saving word vectors to ", save_path)
-    save_objects_to_pickle(word_vectors, save_path)
 
-    documents = load_pickle(save_path)
-    sentence = documents[0].sentences[0]
-    print("{} documents {} sentences".format(len(documents), len(documents[0].sentences)))
-    print("Sentence id", sentence.sentence_id)
-    print("Sentence metadata", sentence.metadata)
-    print(len(sentence.vectors))
+    # Get English translations
+    print("Getting the translations...")
+    trans_begin = time.time()
+    translations = get_google_translations(all_nouns)
+    trans_end = time.time()
+    trans_time = round(trans_end - trans_begin, 3)
+    print("Translation time: {} secs".format(trans_time))
+
+    word_dict = {}
+    for i, n in enumerate(all_nouns):
+        word_dict[n] = {"vectors": word_vectors[n],
+                        "translation": translations[i]}
+    print("Saving word dict to ", save_path)
+    save_objects_to_pickle(word_dict, save_path)
+
+    word_vectors = load_pickle(save_path)
+    words = list(word_vectors.keys())
+    print("{} words".format(len(word_vectors)))
+    print("Value for {}: {}".format(words[0], word_vectors[words[0]]))
 
 
 def generate_sentence_vectors_test(documents_json_path, save_path):

@@ -5,6 +5,16 @@ import datetime as dt
 from cleaner import Cleaner
 from document import Document
 import pickle
+from googletrans import Translator
+
+translator = Translator(service_urls=[
+    'translate.google.co.kr'
+])
+
+
+def get_google_translations(sentences):
+    return [translator.translate(s, src="ko").text for s in sentences]
+
 
 def get_documents(document_json_path):
     cleaner = Cleaner()
@@ -52,15 +62,17 @@ def save_json(dict, save_path):
         json.dump(dict, o)
 
 
-def save_objects_to_pickle(objects,save_path):
+def save_objects_to_pickle(objects, save_path):
     root = os.path.split(save_path)[0]
-    if not os.path.exists(root):os.makedirs(root)
-    with open(save_path,"wb") as f:
-        pickle.dump(objects,f)
+    if not os.path.exists(root): os.makedirs(root)
+    with open(save_path, "wb") as f:
+        pickle.dump(objects, f)
+
 
 def load_pickle(load_path):
-    with open(load_path,"rb") as f:
+    with open(load_path, "rb") as f:
         return pickle.load(f)
+
 
 def save_cooccur_to_txt(cooccur_dict, save_folder):
     if not os.path.exists(save_folder): os.makedirs(save_folder)
@@ -91,7 +103,6 @@ def document_object_test():
 
     first_sentence = first_document.sentences[0]
     print(first_sentence, first_sentence.sentence_id, first_sentence.document_id)
-
 
 
 def main():
