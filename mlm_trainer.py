@@ -114,7 +114,7 @@ def init_mlm_models_from_dict(model_dicts):
         from_pretrained = model_dict.get("from_pretrained", False)
         bert_config = init_config(config_name=config)
         model = init_mlm_model(bert_config, weight_file_path=model_name, from_pretrained=from_pretrained)
-        tokenizer, tokenizer_name = init_tokenizer(tokenizer_name=tokenizer)
+        tokenizer, tokenizer_name = init_tokenizer(tokenizer_name_or_path=tokenizer)
         models[k] = {"config": bert_config,
                      "model": model,
                      "tokenizer": tokenizer,
@@ -588,6 +588,8 @@ def evaluate_model_perplexity(model_paths, dataset_path, repeat=5):
 def evaluate():
     args = parse_args()
     dprk_model_path = "../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh"
+    tokenizer_name = args.tokenizer_name
+    config_name = args.config_name
     if args.model_name_or_path is not None:
         dprk_model_path = args.model_name_or_path
 
@@ -596,7 +598,7 @@ def evaluate():
         "tokenizer": None,
         "config_name": None},
         "DPRK-BERT": {"model_name": dprk_model_path,
-                      "tokenizer": None, "config_name": None},
+                      "tokenizer": tokenizer_name, "config_name": config_name},
         "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
                            "tokenizer": "snunlp/KR-Medium",
                            "config_name": "snunlp/KR-Medium",
