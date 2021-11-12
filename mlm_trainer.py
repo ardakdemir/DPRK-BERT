@@ -109,7 +109,7 @@ def init_mlm_models_from_dict(model_dicts):
     models = {}
     for k, model_dict in model_dicts.items():
         model_name = model_dict["model_name"]
-        config = model_dict.get("config", None)
+        config = model_dict.get("config_name", None)
         tokenizer = model_dict.get("tokenizer", None)
         from_pretrained = model_dict.get("from_pretrained", False)
         bert_config = init_config(config_name=config)

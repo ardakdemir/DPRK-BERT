@@ -1,12 +1,13 @@
 from unicodedata import normalize
-from tokenizers import Tokenizer
+from tokenizers import Tokenizer as DefTokenizer
 from tokenizers.models import WordPiece
 from tokenizers import normalizers
 from tokenizers.normalizers import Lowercase, NFD, StripAccents
 from tokenizers.pre_tokenizers import Whitespace
 from tokenizers.processors import TemplateProcessing
 from tokenizers.trainers import WordPieceTrainer
-
+from transformers import BertTokenizer
+import os
 
 class Tokenizer:
     def __init__(self, tokenizer, cleaner=None, subchar=False):
@@ -52,7 +53,7 @@ class Tokenizer:
 
 
 def train_bert_tokenizer(training_file_list, vocab_size, tokenizer_save_folder, tokenizer_name):
-    bert_tokenizer = Tokenizer(WordPiece())
+    bert_tokenizer = DefTokenizer(WordPiece())
     bert_tokenizer.normalizer = normalizers.Sequence([NFD(), Lowercase(), StripAccents()])
     bert_tokenizer.pre_tokenizer = Whitespace()
 
@@ -68,7 +69,20 @@ def train_bert_tokenizer(training_file_list, vocab_size, tokenizer_save_folder, 
                                special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"])
     bert_tokenizer.train(training_file_list, trainer)
     save_path = os.path.join(tokenizer_save_folder, tokenizer_name + ".json")
-    model_files = bert_tokenizer.model.save(tokenizer_save_folder, "")
+    model_files = bert_tokenizer.model.save(tokenizer_save_folder, tokenizer_name)
     bert_tokenizer.model = WordPiece.from_file(*model_files, unk_token="[UNK]")
     bert_tokenizer.save(save_path)
     return bert_tokenizer
+
+
+def main():
+    training_file_list = ["../dprk-bert-data/rodong_all_data_2210/rodong_all.txt"]
+    vocab_size = 10000
+    tokenizer_save_folder = "../pretrained_model_data"
+    tokenizer_name = "dprk-bert-rodong-1211"
+    train_bert_tokenizer(training_file_list, vocab_size, tokenizer_save_folder, tokenizer_name)
+    vocab_path = os.path.join(tokenizer_save_folder,tokenizer_name+"-vocab.txt")
+    tokenizer = BertTokenizer.from_pretrained(vocab_path, do_lower_case=False)
+    print("Tokenizer vocab size: {}".format(len(tokenizer.vocab)))
+if __name__ == "__main__":
+    main()
