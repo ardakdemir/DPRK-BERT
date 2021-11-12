@@ -65,7 +65,7 @@ def init_config(config_name=None):
 
 
 def init_tokenizer(tokenizer_name_or_path=None, from_pretrained=True):
-    if tokenizer_name_or_path is None and default:
+    if tokenizer_name_or_path is None and not from_pretrained:
         tokenizer = BertTokenizer(config_file.VOCAB_PATH, do_lower_case=False)
         tokenizer_name_or_path = "default"
     else:
@@ -114,7 +114,7 @@ def init_mlm_models_from_dict(model_dicts):
         from_pretrained = model_dict.get("from_pretrained", False)
         bert_config = init_config(config_name=config)
         model = init_mlm_model(bert_config, weight_file_path=model_name, from_pretrained=from_pretrained)
-        tokenizer, tokenizer_name = init_tokenizer(tokenizer_name_or_path=tokenizer)
+        tokenizer, tokenizer_name = init_tokenizer(tokenizer_name_or_path=tokenizer,from_pretrained=from_pretrained)
         models[k] = {"config": bert_config,
                      "model": model,
                      "tokenizer": tokenizer,
