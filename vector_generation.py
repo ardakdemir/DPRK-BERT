@@ -67,7 +67,7 @@ def generate_sentence_vectors(document_objects, save_folder, model_dicts, device
     for i, document in enumerate(document_objects):
         if i >= number_of_documents:
             break
-        if i + 1 % pickle_size == 0:
+        if (i + 1) % pickle_size == 0:
             if len(documents_to_pickle) > 0:
                 save_documents_to_pickle(documents_to_pickle,save_folder)
                 documents_to_pickle = []
