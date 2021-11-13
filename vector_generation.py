@@ -2,11 +2,13 @@ import pickle as pkl
 import numpy as np
 from document import Document, Sentence
 import torch
-from utils import get_document_objects, save_objects_to_pickle, load_pickle, get_google_translations
+from utils import get_document_objects, save_documents_to_pickle, save_objects_to_pickle, load_pickle, \
+    get_google_translations
 from mlm_trainer import init_mlm_models_from_dict
 from tqdm import tqdm
 import argparse
 from collections import defaultdict
+import os
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -33,6 +35,12 @@ def parse_args():
         help="Save folder for dataset",
     )
     parser.add_argument(
+        "--save_folder",
+        type=str,
+        default="../dprk-bert-data/rodong_toy_pickles",
+        help="Save folder for dataset",
+    )
+    parser.add_argument(
         "--size",
         type=int,
         default=1e9,
@@ -42,7 +50,7 @@ def parse_args():
     return args
 
 
-def generate_sentence_vectors(document_objects, model_dicts, device, number_of_documents=1e9):
+def generate_sentence_vectors(document_objects, save_folder, model_dicts, device, number_of_documents=1e9):
     """
         For each sentence generate a feature vector using all models
     :param sentence_objects:
@@ -52,10 +60,17 @@ def generate_sentence_vectors(document_objects, model_dicts, device, number_of_d
     for k, model_dict in model_dicts.items():
         model_dict["model"].to(device)
         model_dict["model"].eval()
+    document_objects.sort(key=lambda x: x.metadata["date"])
     progress_bar = tqdm(range(min(len(document_objects), number_of_documents) * len(model_dicts)), desc="Step")
+    documents_to_pickle = []
+    pickle_size = 50
     for i, document in enumerate(document_objects):
         if i >= number_of_documents:
             break
+        if i + 1 % pickle_size == 0:
+            if len(documents_to_pickle) > 0:
+                save_documents_to_pickle(documents_to_pickle,save_folder)
+                documents_to_pickle = []
         document_sentences = document.get_sentences()
         document_id = document.get_id()
         num_sents = len(document_sentences)
@@ -75,6 +90,10 @@ def generate_sentence_vectors(document_objects, model_dicts, device, number_of_d
                         0].detach().cpu().numpy()  # last layer's first sentence's first token output
                     sentence.set_vector(v, k)
             progress_bar.update(1)
+        documents_to_pickle.append(document)
+    if len(documents_to_pickle) > 0:
+        save_documents_to_pickle(documents_to_pickle, save_folder)
+        documents_to_pickle = []
     return document_objects
 
 
@@ -156,7 +175,7 @@ def generate_noun_vectors_caller(source_json_path, save_path):
     print("Value for {}: {}".format(words[0], word_vectors[words[0]]))
 
 
-def generate_sentence_vectors_test(documents_json_path, save_path, args):
+def generate_sentence_vectors_test(documents_json_path, save_folder, args):
     size = args.size
     dprk_model_path = "../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh"
     # model_dict = {"KR-BERT": {
@@ -181,26 +200,29 @@ def generate_sentence_vectors_test(documents_json_path, save_path, args):
     print("initializing the models...")
     model_dicts = init_mlm_models_from_dict(model_dict)
     document_objects = get_document_objects(documents_json_path)
-    document_objects = generate_sentence_vectors(document_objects, model_dicts, device, number_of_documents=size)
+    document_objects = generate_sentence_vectors(document_objects, save_folder, model_dicts, device,
+                                                 number_of_documents=size)
 
-    print("Saving sentence vectors to ", save_path)
-    save_objects_to_pickle(document_objects, save_path)
-
-    documents = load_pickle(save_path)
-    sentence = documents[0].sentences[0]
-    print("{} documents {} sentences".format(len(documents), len(documents[0].sentences)))
-    print("Sentence id", sentence.sentence_id)
-    print("Sentence metadata", sentence.metadata)
-    print(len(sentence.vectors))
+    # print("Saving sentence vectors to ", save_path)
+    # save_objects_to_pickle(document_objects, save_path)
+    #
+    # documents = load_pickle(save_path)
+    # sentence = documents[0].sentences[0]
+    # print("{} documents {} sentences".format(len(documents), len(documents[0].sentences)))
+    # print("Sentence id", sentence.sentence_id)
+    # print("Sentence metadata", sentence.metadata)
+    # print(len(sentence.vectors))
 
 
 def main():
     args = parse_args()
     source_json_path = args.source_json_path
-    save_path = args.save_path
+    save_folder = args.save_folder
+    if not os.path.exists(save_folder):
+        os.makedirs(save_folder)
     action = args.action
     if action == "store_documents":
-        generate_sentence_vectors_test(source_json_path, save_path, args)
+        generate_sentence_vectors_test(source_json_path, save_folder, args)
     elif action == "store_nouns":
         generate_noun_vectors_caller(source_json_path, save_path)
 

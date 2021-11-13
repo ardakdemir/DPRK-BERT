@@ -69,6 +69,20 @@ def save_objects_to_pickle(objects, save_path):
         pickle.dump(objects, f)
 
 
+def save_documents_to_pickle(documents_to_pickle, save_folder):
+    document_ids = [x.get_id() for x in documents_to_pickle]
+    date_start = documents_to_pickle[0].metadata['date']
+    date_end = documents_to_pickle[-1].metadata['date']
+    file_name = "documents_{}_{}.pkl".format(date_start, date_end)
+    objects_to_pickle = {"document_ids": document_ids,
+                         "size": len(document_ids),
+                         "start_date": date_start,
+                         "end_date": date_end,
+                         "documents": documents_to_pickle}
+    file_path = os.path.join(save_folder, file_name)
+    save_objects_to_pickle(objects_to_pickle, file_path)
+
+
 def load_pickle(load_path):
     with open(load_path, "rb") as f:
         return pickle.load(f)
