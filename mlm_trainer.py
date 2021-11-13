@@ -608,7 +608,7 @@ def evaluate():
                   "config_name": "bert-base-multilingual-cased",
                   "from_pretrained": True}
     }
-    dataset_path = "../dprk-bert-data/new_year_mlm_data/train.json"
+    dataset_path = args.validation_file
     prefix = "comparison"
 
     exp_name = get_exp_name(prefix)
