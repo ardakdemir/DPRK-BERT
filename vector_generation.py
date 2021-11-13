@@ -32,11 +32,17 @@ def parse_args():
         default="../dprk-bert-data/rodong_toy_document_vectors.pkl",
         help="Save folder for dataset",
     )
+    parser.add_argument(
+        "--size",
+        type=int,
+        default=1e9,
+        help="Number of documents to parse",
+    )
     args = parser.parse_args()
     return args
 
 
-def generate_sentence_vectors(document_objects, model_dicts, device):
+def generate_sentence_vectors(document_objects, model_dicts, device,number_of_documents = 1e9):
     """
         For each sentence generate a feature vector using all models
     :param sentence_objects:
@@ -46,8 +52,10 @@ def generate_sentence_vectors(document_objects, model_dicts, device):
     for k, model_dict in model_dicts.items():
         model_dict["model"].to(device)
         model_dict["model"].eval()
-    progress_bar = tqdm(range(len(document_objects) * len(model_dicts)), desc="Step")
-    for document in document_objects:
+    progress_bar = tqdm(range(min(len(document_objects),number_of_documents) * len(model_dicts)), desc="Step")
+    for i,document in enumerate(document_objects):
+        if i>=number_of_documents:
+            break
         document_sentences = document.get_sentences()
         document_id = document.get_id()
         num_sents = len(document_sentences)
@@ -148,7 +156,8 @@ def generate_noun_vectors_caller(source_json_path, save_path):
     print("Value for {}: {}".format(words[0], word_vectors[words[0]]))
 
 
-def generate_sentence_vectors_test(documents_json_path, save_path):
+def generate_sentence_vectors_test(documents_json_path, save_path,args):
+    size = args.size
     dprk_model_path = "../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh"
     model_dict = {"KR-BERT": {
         "model_name": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",
@@ -168,7 +177,7 @@ def generate_sentence_vectors_test(documents_json_path, save_path):
     print("initializing the models...")
     model_dicts = init_mlm_models_from_dict(model_dict)
     document_objects = get_document_objects(documents_json_path)
-    document_objects = generate_sentence_vectors(document_objects, model_dicts, device)
+    document_objects = generate_sentence_vectors(document_objects, model_dicts, device,number_of_documents=size)
 
     print("Saving sentence vectors to ", save_path)
     save_objects_to_pickle(document_objects, save_path)
