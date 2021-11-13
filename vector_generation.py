@@ -42,7 +42,7 @@ def parse_args():
     return args
 
 
-def generate_sentence_vectors(document_objects, model_dicts, device,number_of_documents = 1e9):
+def generate_sentence_vectors(document_objects, model_dicts, device, number_of_documents=1e9):
     """
         For each sentence generate a feature vector using all models
     :param sentence_objects:
@@ -52,9 +52,9 @@ def generate_sentence_vectors(document_objects, model_dicts, device,number_of_do
     for k, model_dict in model_dicts.items():
         model_dict["model"].to(device)
         model_dict["model"].eval()
-    progress_bar = tqdm(range(min(len(document_objects),number_of_documents) * len(model_dicts)), desc="Step")
-    for i,document in enumerate(document_objects):
-        if i>=number_of_documents:
+    progress_bar = tqdm(range(min(len(document_objects), number_of_documents) * len(model_dicts)), desc="Step")
+    for i, document in enumerate(document_objects):
+        if i >= number_of_documents:
             break
         document_sentences = document.get_sentences()
         document_id = document.get_id()
@@ -156,28 +156,32 @@ def generate_noun_vectors_caller(source_json_path, save_path):
     print("Value for {}: {}".format(words[0], word_vectors[words[0]]))
 
 
-def generate_sentence_vectors_test(documents_json_path, save_path,args):
+def generate_sentence_vectors_test(documents_json_path, save_path, args):
     size = args.size
     dprk_model_path = "../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh"
-    model_dict = {"KR-BERT": {
-        "model_name": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",
-        "tokenizer": None,
-        "config_name": None},
+    # model_dict = {"KR-BERT": {
+    #     "model_name": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",
+    #     "tokenizer": None,
+    #     "config_name": None},
+    #     "DPRK-BERT": {"model_name": dprk_model_path,
+    #                   "tokenizer": None, "config_name": None},
+    #     "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
+    #                        "tokenizer": "snunlp/KR-Medium",
+    #                        "config_name": "snunlp/KR-Medium",
+    #                        "from_pretrained": True},
+    #     "mBERT": {"model_name": "bert-base-multilingual-cased",
+    #               "tokenizer": "bert-base-multilingual-cased",
+    #               "config_name": "bert-base-multilingual-cased",
+    #               "from_pretrained": True}
+    # }
+    model_dict = {
         "DPRK-BERT": {"model_name": dprk_model_path,
                       "tokenizer": None, "config_name": None},
-        "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
-                           "tokenizer": "snunlp/KR-Medium",
-                           "config_name": "snunlp/KR-Medium",
-                           "from_pretrained": True},
-        "mBERT": {"model_name": "bert-base-multilingual-cased",
-                  "tokenizer": "bert-base-multilingual-cased",
-                  "config_name": "bert-base-multilingual-cased",
-                  "from_pretrained": True}
     }
     print("initializing the models...")
     model_dicts = init_mlm_models_from_dict(model_dict)
     document_objects = get_document_objects(documents_json_path)
-    document_objects = generate_sentence_vectors(document_objects, model_dicts, device,number_of_documents=size)
+    document_objects = generate_sentence_vectors(document_objects, model_dicts, device, number_of_documents=size)
 
     print("Saving sentence vectors to ", save_path)
     save_objects_to_pickle(document_objects, save_path)
@@ -196,7 +200,7 @@ def main():
     save_path = args.save_path
     action = args.action
     if action == "store_documents":
-        generate_sentence_vectors_test(source_json_path, save_path)
+        generate_sentence_vectors_test(source_json_path, save_path, args)
     elif action == "store_nouns":
         generate_noun_vectors_caller(source_json_path, save_path)
 

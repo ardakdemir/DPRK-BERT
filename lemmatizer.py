@@ -11,7 +11,7 @@ lemmatizer = Lemmatizer()
 
 
 def get_nouns(sentences):
-    return [s for s in sentences.split()]
+    return [s.split() for s in sentences]
 
 
 def test():
