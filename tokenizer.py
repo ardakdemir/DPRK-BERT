@@ -2,12 +2,45 @@ from unicodedata import normalize
 from tokenizers import Tokenizer as DefTokenizer
 from tokenizers.models import WordPiece
 from tokenizers import normalizers
-from tokenizers.normalizers import Lowercase, NFD, StripAccents
+from tokenizers.normalizers import Lowercase, NFKC, StripAccents
 from tokenizers.pre_tokenizers import Whitespace
 from tokenizers.processors import TemplateProcessing
 from tokenizers.trainers import WordPieceTrainer
 from transformers import BertTokenizer
 import os
+import argparse
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train a tokenizer from a source file")
+
+    parser.add_argument(
+        "--tokenizer_name",
+        type=str,
+        default="dprk-bert-rodong-1311",
+        help="Tokenizer name",
+    )
+    parser.add_argument(
+        "--source_file",
+        type=str,
+        default="../pretrained_model_data",
+        help="Source file for training the tokenizer",
+    )
+    parser.add_argument(
+        "--save_folder",
+        type=str,
+        default="../pretrained_model_data",
+        help="Save folder for dataset",
+    )
+    parser.add_argument(
+        "--vocab_size",
+        type=int,
+        default=16424,
+        help="vocab size",
+    )
+    args = parser.parse_args()
+    return args
+
 
 class Tokenizer:
     def __init__(self, tokenizer, cleaner=None, subchar=False):
@@ -54,7 +87,7 @@ class Tokenizer:
 
 def train_bert_tokenizer(training_file_list, vocab_size, tokenizer_save_folder, tokenizer_name):
     bert_tokenizer = DefTokenizer(WordPiece())
-    bert_tokenizer.normalizer = normalizers.Sequence([NFD(), Lowercase(), StripAccents()])
+    bert_tokenizer.normalizer = normalizers.Sequence([NFKC(), Lowercase(), StripAccents()])
     bert_tokenizer.pre_tokenizer = Whitespace()
 
     bert_tokenizer.post_processor = TemplateProcessing(
@@ -76,13 +109,19 @@ def train_bert_tokenizer(training_file_list, vocab_size, tokenizer_save_folder, 
 
 
 def main():
-    training_file_list = ["../dprk-bert-data/rodong_all_data_2210/rodong_all.txt"]
-    vocab_size = 16424
-    tokenizer_save_folder = "../pretrained_model_data"
-    tokenizer_name = "dprk-bert-rodong-1211"
-    train_bert_tokenizer(training_file_list, vocab_size, tokenizer_save_folder, tokenizer_name)
-    vocab_path = os.path.join(tokenizer_save_folder,tokenizer_name+"-vocab.txt")
+
+    args = parse_args()
+    source_file = args.source_file
+    tokenizer_name = args.tokenizer_name
+    save_folder = args.save_folder
+    vocab_size = args.vocab_size
+
+    training_file_list = [source_file]
+    train_bert_tokenizer(training_file_list, vocab_size, save_folder, tokenizer_name)
+    vocab_path = os.path.join(save_folder, tokenizer_name + "-vocab.txt")
     tokenizer = BertTokenizer.from_pretrained(vocab_path, do_lower_case=False)
     print("Tokenizer vocab size: {}".format(len(tokenizer.vocab)))
+
+
 if __name__ == "__main__":
     main()
