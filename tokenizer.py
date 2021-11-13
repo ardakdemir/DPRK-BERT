@@ -77,7 +77,7 @@ def train_bert_tokenizer(training_file_list, vocab_size, tokenizer_save_folder, 
 
 def main():
     training_file_list = ["../dprk-bert-data/rodong_all_data_2210/rodong_all.txt"]
-    vocab_size = 10000
+    vocab_size = 16424
     tokenizer_save_folder = "../pretrained_model_data"
     tokenizer_name = "dprk-bert-rodong-1211"
     train_bert_tokenizer(training_file_list, vocab_size, tokenizer_save_folder, tokenizer_name)
