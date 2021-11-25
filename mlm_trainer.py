@@ -346,6 +346,7 @@ def train():
 
     print("Starting the training...")
     model.to(device)
+    initial_bert_model.to(device)
     min_perplexity = 1e6
     cl_regularization_terms = []
     all_train_losses = []
