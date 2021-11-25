@@ -2,6 +2,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 from collections import defaultdict
+import json
 
 
 def joint_line_plot(value_dict, save_path, y_label=None):
@@ -30,7 +31,7 @@ def joint_bar_plot(value_dict, save_path, y_label=None, width=0.25, separation=0
     model_names = list(value_dict.keys())
     num = len(model_names)
     offset = lambda index: 1 + separation * index + (num * width) * index
-    x_positions = [offset(index) for index in range(len(value_dict[model_names[0]])) ]
+    x_positions = [offset(index) for index in range(len(value_dict[model_names[0]]))]
     for i, m in enumerate(model_names):
         values = value_dict[m]
         plt.bar(x=[offset(index) + width * i - ((num - 1) / 2) * width for index in range(len(values))], height=values,
@@ -69,6 +70,11 @@ class BasicPlotter:
             plt.xticks(np.arange(0, len(v) + 1, 1.0))
             plt.savefig(p)
             plt.close("all")
+
+    def store_json(self):
+        p = os.path.join(self.save_root, self.prefix + "training_metrics" + ".json")
+        with open(p, "w") as j:
+            json.dump(self.metrics, j)
 
 
 def main():

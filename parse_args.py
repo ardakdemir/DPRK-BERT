@@ -16,6 +16,7 @@ def parse_args():
         default=None,
         help="The configuration name of the dataset to use (via the datasets library).",
     )
+
     parser.add_argument(
         "--save_folder",
         type=str,
@@ -45,6 +46,12 @@ def parse_args():
         action="store_true",
         default=False,
         help="If passed, train a mlm model from scratch.",
+    )
+    parser.add_argument(
+        "--with_cl_regularization",
+        action="store_true",
+        default=False,
+        help="If passed, add cross-lingual regularization term to the loss function.",
     )
     parser.add_argument(
         "--model_name_or_path",
@@ -108,10 +115,22 @@ def parse_args():
         help="Total number of training steps to perform. If provided, overrides num_train_epochs.",
     )
     parser.add_argument(
+        "--steps_per_epoch",
+        type=int,
+        default=1e9,
+        help="Total number of steps per epoch (optional).",
+    )
+    parser.add_argument(
         "--gradient_accumulation_steps",
         type=int,
         default=1,
         help="Number of updates steps to accumulate before performing a backward/update pass.",
+    )
+    parser.add_argument(
+        "--regularizer_append_steps",
+        type=int,
+        default=5,
+        help="Number of batches before sending the regularization value to metrics.",
     )
     parser.add_argument(
         "--lr_scheduler_type",

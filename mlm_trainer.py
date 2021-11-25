@@ -78,6 +78,30 @@ def init_tokenizer(tokenizer_name_or_path=None, from_pretrained=True):
     return tokenizer, tokenizer_name_or_path
 
 
+def cl_regularization(hidden_states_1, hidden_states_2, args):
+    hidden_1 = hidden_states_1[-2]
+    hidden_2 = hidden_states_2[-2]
+    weight = 0.1
+    shape = hidden_states_2[-2].shape  ## Last layer before mask head
+    dim = 2
+    if len(shape) == 2:  # means no batching weird!!
+        dim = 1
+
+    return torch.mean(torch.norm(hidden_1 - hidden_2, dim=dim)) * weight
+
+
+def init_krbert():
+    # Get config
+    with open(config_file.CONFIG_FILE_PATH, "rb") as r:
+        config_dict = json.load(r)
+        bert_config = BertConfig(**config_dict)
+    weights = torch.load(config_file.WEIGHT_FILE_PATH, map_location="cpu")
+    krbert = BertForMaskedLM(bert_config)
+    incom_keys =krbert.load_state_dict(weights, strict=False)
+    print("Missing keys ", len(incom_keys.missing_keys),"Unexpected keys ", len(incom_keys.unexpected_keys))
+    return krbert
+
+
 def init_mlm_model(config, weight_file_path=None, from_pretrained=False, from_scratch=False):
     if not from_pretrained:
         model = BertForMaskedLM(config)
@@ -114,7 +138,7 @@ def init_mlm_models_from_dict(model_dicts):
         from_pretrained = model_dict.get("from_pretrained", False)
         bert_config = init_config(config_name=config)
         model = init_mlm_model(bert_config, weight_file_path=model_name, from_pretrained=from_pretrained)
-        tokenizer, tokenizer_name = init_tokenizer(tokenizer_name_or_path=tokenizer,from_pretrained=from_pretrained)
+        tokenizer, tokenizer_name = init_tokenizer(tokenizer_name_or_path=tokenizer, from_pretrained=from_pretrained)
         models[k] = {"config": bert_config,
                      "model": model,
                      "tokenizer": tokenizer,
@@ -225,12 +249,18 @@ def train():
     args = parse_args()
     train_from_scratch = args.train_from_scratch
     config_path = args.config_name
-    tokenizer_name = args.tokenizer_name
+    tokenizer_name = args.tokenizer_name if args.tokenizer_name else config_file.VOCAB_PATH
 
-    config = init_config(config_path)
-    model = init_mlm_model(config, from_scratch=train_from_scratch)
+    bert_config = init_config(config_path)
+    weight_path = config_file.WEIGHT_FILE_PATH
+    model = init_mlm_model(bert_config, weight_path, from_scratch=train_from_scratch)
     tokenizer, tokenizer_name = init_tokenizer(tokenizer_name_or_path=tokenizer_name,
                                                from_pretrained=not train_from_scratch)
+
+    # Later generalize this step
+    print("Initializing the kr-bert model for regularization")
+    initial_bert_model = init_krbert()
+    initial_bert_model.eval()  # Always in eval mode? is this a wrong idea?
 
     prefix = "train"
     save_folder = args.save_folder
@@ -317,14 +347,27 @@ def train():
     print("Starting the training...")
     model.to(device)
     min_perplexity = 1e6
+    cl_regularization_terms = []
+    all_train_losses = []
+    all_eval_losses = []
     for epoch in range(args.num_train_epochs):
         model.train()
         train_losses = []
         epoch_begin = time.time()
         for step, batch in enumerate(train_dataloader):
             batch = {k: v.to(device) for k, v in batch.items()}
-            outputs = model(**batch)
+            outputs = model(**batch, output_hidden_states=True)
+            with torch.no_grad():
+                initial_bert_model_output = initial_bert_model(**batch, output_hidden_states=True)
+
+            cl_regularization_term = cl_regularization(outputs.hidden_states,
+                                                       initial_bert_model_output.hidden_states,
+                                                       args)
             loss = outputs.loss
+            cl_regularization_terms.append(cl_regularization_term.item())
+            if args.with_cl_regularization:
+                loss = loss + cl_regularization_term
+
             loss = loss / args.gradient_accumulation_steps
             train_losses.append(loss.item())
             loss.backward()
@@ -334,8 +377,13 @@ def train():
                 optimizer.zero_grad()
                 progress_bar.update(1)
                 completed_steps += 1
-
+            if step % args.regularizer_append_steps == 0 or step == len(train_dataloader) - 1:
+                basic_plotter.send_metrics(
+                    {"cl_regularizer_term": np.mean(cl_regularization_terms[-step:])})  # from last update
             if completed_steps >= args.max_train_steps:
+                break
+
+            if completed_steps >= args.steps_per_epoch:
                 break
 
         epoch_end = time.time()
@@ -366,7 +414,8 @@ def train():
             print("Saving best model with average perplexity of {} to: {}".format(perplexity, model_save_path))
             best_model_weights = model.state_dict()
             torch.save(best_model_weights, model_save_path)
-
+            min_perplexity = perplexity
+    basic_plotter.store_json()
 
 def evaluate_single_model(model, dataloader, tokenizer=None, break_after=2):
     model.eval()
