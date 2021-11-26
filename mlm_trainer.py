@@ -16,6 +16,7 @@ from sklearn.decomposition import PCA
 import numpy as np
 import json
 import time
+from timer import Timer
 # from net import SentenceClassifier
 from tqdm import tqdm
 from parse_args import parse_args
@@ -97,8 +98,8 @@ def init_krbert():
         bert_config = BertConfig(**config_dict)
     weights = torch.load(config_file.WEIGHT_FILE_PATH, map_location="cpu")
     krbert = BertForMaskedLM(bert_config)
-    incom_keys =krbert.load_state_dict(weights, strict=False)
-    print("Missing keys ", len(incom_keys.missing_keys),"Unexpected keys ", len(incom_keys.unexpected_keys))
+    incom_keys = krbert.load_state_dict(weights, strict=False)
+    print("Missing keys ", len(incom_keys.missing_keys), "Unexpected keys ", len(incom_keys.unexpected_keys))
     return krbert
 
 
@@ -270,6 +271,7 @@ def train():
 
     plot_save_folder = os.path.join(experiment_folder, "plots")
     basic_plotter = BasicPlotter(plot_save_folder)
+    timer = Timer()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # Dataset
     data_files = {}
@@ -359,11 +361,12 @@ def train():
             batch = {k: v.to(device) for k, v in batch.items()}
             outputs = model(**batch, output_hidden_states=True)
             with torch.no_grad():
-                initial_bert_model_output = initial_bert_model(**batch, output_hidden_states=True)
+                batch.update({"output_hidden_states": True})
+                initial_bert_model_output = timer("Bert output time", initial_bert_model, (), batch)
 
-            cl_regularization_term = cl_regularization(outputs.hidden_states,
-                                                       initial_bert_model_output.hidden_states,
-                                                       args)
+            cl_regularization_term = timer("CL regularization", cl_regularization, (outputs.hidden_states,
+                                                                                    initial_bert_model_output.hidden_states,
+                                                                                    args))
             loss = outputs.loss
             cl_regularization_terms.append(cl_regularization_term.item())
             if args.with_cl_regularization:
@@ -417,6 +420,7 @@ def train():
             torch.save(best_model_weights, model_save_path)
             min_perplexity = perplexity
     basic_plotter.store_json()
+
 
 def evaluate_single_model(model, dataloader, tokenizer=None, break_after=2):
     model.eval()
