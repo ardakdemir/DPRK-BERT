@@ -82,7 +82,7 @@ def init_tokenizer(tokenizer_name_or_path=None, from_pretrained=True):
 def cl_regularization(hidden_states_1, hidden_states_2, args):
     hidden_1 = hidden_states_1[-2]
     hidden_2 = hidden_states_2[-2]
-    weight = 0.1
+    weight = args.regularizer_weight
     shape = hidden_states_2[-2].shape  ## Last layer before mask head
     dim = 2
     if len(shape) == 2:  # means no batching weird!!

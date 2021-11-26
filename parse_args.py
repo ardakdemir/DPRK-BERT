@@ -133,6 +133,12 @@ def parse_args():
         help="Total number of steps per epoch (optional).",
     )
     parser.add_argument(
+        "--steps_per_epoch",
+        type=int,
+        default=1e9,
+        help="Total number of steps per epoch (optional).",
+    )
+    parser.add_argument(
         "--gradient_accumulation_steps",
         type=int,
         default=1,
@@ -191,6 +197,9 @@ def parse_args():
     )
     parser.add_argument(
         "--mlm_probability", type=float, default=0.15, help="Ratio of tokens to mask for masked language modeling loss"
+    )
+    parser.add_argument(
+        "--regularizer_weight", type=float, default=0.1, help="lambda for cross-lingual regularization "
     )
     parser.add_argument("--push_to_hub", action="store_true", help="Whether or not to push the model to the Hub.")
     parser.add_argument(
