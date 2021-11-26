@@ -64,11 +64,10 @@ class BasicPlotter:
 
         for k, v in old_metrics.items():
             p = os.path.join(self.save_root, self.prefix + k + ".png")
-
             plt.figure(figsize=(12, 8))
             plt.plot(v)
             plt.ylabel(k)
-            plt.xticks(np.arange(1,len(v)+1,max(1,len(v)//self.max_xticks)))
+            # plt.xticks(np.arange(1,len(v)+1,max(1,len(v)//self.max_xticks)),)
             plt.savefig(p)
             plt.close("all")
 

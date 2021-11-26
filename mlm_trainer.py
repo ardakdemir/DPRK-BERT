@@ -393,7 +393,7 @@ def train():
             if completed_steps >= args.max_train_steps:
                 break
 
-            if completed_steps >= args.steps_per_epoch:
+            if steps >= args.steps_per_epoch:
                 break
 
         epoch_end = time.time()
