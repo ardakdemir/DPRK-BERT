@@ -374,9 +374,9 @@ def train():
 
             loss = loss / args.gradient_accumulation_steps
             train_losses.append(loss.item())
-            loss.backward()
+            timer("Loss backward", loss.backward, ())
             if step % args.gradient_accumulation_steps == 0 or step == len(train_dataloader) - 1:
-                optimizer.step()
+                timer("Optimizer step", optimizer.step,())
                 lr_scheduler.step()
                 optimizer.zero_grad()
                 progress_bar.update(1)
