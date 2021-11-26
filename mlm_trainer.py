@@ -248,6 +248,7 @@ def tokenize_function(examples, tokenizer, max_seq_length=512, text_column_name=
 
 def train():
     args = parse_args()
+    arg_dict = vars(args)
     train_from_scratch = args.train_from_scratch
     turnoff_clr = args.turnoff_clr
 
@@ -426,6 +427,9 @@ def train():
             torch.save(best_model_weights, model_save_path)
             min_perplexity = perplexity
     basic_plotter.store_json()
+    args_path = os.path.join(save_folder, "experiment_args.json")
+    with open(args_path, "w") as o:
+        json.dump(arg_dict, o)
 
 
 def evaluate_single_model(model, dataloader, tokenizer=None, break_after=2):
@@ -648,6 +652,7 @@ def evaluate_model_perplexity(model_paths, dataset_path, repeat=5):
 def evaluate():
     args = parse_args()
     dprk_model_path = "../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh"
+    dprk_cl_model_path = "../experiment_outputs/withclr_2611_1532/best_model_weights.pkh"
     tokenizer_name = args.tokenizer_name
     config_name = args.config_name
     if args.model_name_or_path is not None:
@@ -657,16 +662,21 @@ def evaluate():
         "model_name": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",
         "tokenizer": None,
         "config_name": None},
-        "DPRK-BERT": {"model_name": dprk_model_path,
-                      "tokenizer": tokenizer_name, "config_name": config_name},
-        "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
-                           "tokenizer": "snunlp/KR-Medium",
-                           "config_name": "snunlp/KR-Medium",
-                           "from_pretrained": True},
-        "mBERT": {"model_name": "bert-base-multilingual-cased",
-                  "tokenizer": "bert-base-multilingual-cased",
-                  "config_name": "bert-base-multilingual-cased",
-                  "from_pretrained": True}
+        "KR-BERT-CL": {
+            "model_name": dprk_cl_model_path,
+            "tokenizer": None,
+            "config_name": None},
+        # "DPRK-BERT": {"model_name": dprk_model_path,
+        #               "tokenizer": tokenizer_name,
+        #               "config_name": config_name},
+        # "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
+        #                    "tokenizer": "snunlp/KR-Medium",
+        #                    "config_name": "snunlp/KR-Medium",
+        #                    "from_pretrained": True},
+        # "mBERT": {"model_name": "bert-base-multilingual-cased",
+        #           "tokenizer": "bert-base-multilingual-cased",
+        #           "config_name": "bert-base-multilingual-cased",
+        #           "from_pretrained": True}
     }
     dataset_path = args.validation_file
     prefix = "comparison"
