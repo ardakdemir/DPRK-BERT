@@ -52,6 +52,7 @@ class BasicPlotter:
     def __init__(self, save_root_folder, prefix="", metrics={}):
         self.save_root = save_root_folder
         self.metrics = defaultdict(list)
+        self.max_xticks = 50
         self.prefix = prefix
         if not os.path.exists(self.save_root):
             os.makedirs(self.save_root)
@@ -67,7 +68,7 @@ class BasicPlotter:
             plt.figure(figsize=(12, 8))
             plt.plot(v)
             plt.ylabel(k)
-            plt.xticks(np.arange(0, len(v) + 1, 1.0))
+            plt.xticks(np.arange(1,len(v)+1,max(1,len(v)//max_size)))
             plt.savefig(p)
             plt.close("all")
 
