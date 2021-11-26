@@ -54,6 +54,12 @@ def parse_args():
         help="If passed, add cross-lingual regularization term to the loss function.",
     )
     parser.add_argument(
+        "--timer_verbose",
+        action="store_true",
+        default=False,
+        help="If passed, Output the timer results",
+    )
+    parser.add_argument(
         "--turnoff_clr",
         action="store_true",
         default=False,

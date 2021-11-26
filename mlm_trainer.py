@@ -274,7 +274,7 @@ def train():
 
     plot_save_folder = os.path.join(experiment_folder, "plots")
     basic_plotter = BasicPlotter(plot_save_folder)
-    timer = Timer()
+    timer = Timer(verbose=False)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # Dataset
     data_files = {}
@@ -384,7 +384,7 @@ def train():
             train_losses.append(loss.item())
             timer("Loss backward", loss.backward, ())
             if step % args.gradient_accumulation_steps == 0 or step == len(train_dataloader) - 1:
-                timer("Optimizer step", optimizer.step,())
+                timer("Optimizer step", optimizer.step, ())
                 lr_scheduler.step()
                 optimizer.zero_grad()
                 progress_bar.update(1)
@@ -393,7 +393,7 @@ def train():
             if completed_steps >= args.max_train_steps:
                 break
 
-            if steps >= args.steps_per_epoch:
+            if step >= args.steps_per_epoch:
                 break
 
         epoch_end = time.time()
