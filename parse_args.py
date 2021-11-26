@@ -54,6 +54,12 @@ def parse_args():
         help="If passed, add cross-lingual regularization term to the loss function.",
     )
     parser.add_argument(
+        "--turnoff_clr",
+        action="store_true",
+        default=False,
+        help="If passed, Completely skip cl reg calculations",
+    )
+    parser.add_argument(
         "--model_name_or_path",
         type=str,
         default=None,

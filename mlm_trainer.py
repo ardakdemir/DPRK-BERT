@@ -249,6 +249,8 @@ def tokenize_function(examples, tokenizer, max_seq_length=512, text_column_name=
 def train():
     args = parse_args()
     train_from_scratch = args.train_from_scratch
+    turnoff_clr = args.turnoff_clr
+
     config_path = args.config_name
     tokenizer_name = args.tokenizer_name if args.tokenizer_name else config_file.VOCAB_PATH
 
@@ -259,9 +261,10 @@ def train():
                                                from_pretrained=not train_from_scratch)
 
     # Later generalize this step
-    # print("Initializing the kr-bert model for regularization")
-    # initial_bert_model = init_krbert()
-    # initial_bert_model.eval()  # Always in eval mode? is this a wrong idea?
+    if not turnoff_clr:
+        print("Initializing the kr-bert model for regularization")
+        initial_bert_model = init_krbert()
+        initial_bert_model.eval()  # Always in eval mode? is this a wrong idea?
 
     prefix = "train"
     save_folder = args.save_folder
@@ -348,7 +351,8 @@ def train():
 
     print("Starting the training...")
     model.to(device)
-    # initial_bert_model.to(device)
+    if not turnoff_clr:
+        initial_bert_model.to(device)
     min_perplexity = 1e6
     cl_regularization_terms = []
     all_train_losses = []
@@ -360,17 +364,21 @@ def train():
         for step, batch in enumerate(train_dataloader):
             batch = {k: v.to(device) for k, v in batch.items()}
             outputs = model(**batch, output_hidden_states=True)
-            # with torch.no_grad():
-            #     batch.update({"output_hidden_states": True})
-            #     initial_bert_model_output = timer("Bert output time", initial_bert_model, (), batch)
-            #
-            # cl_regularization_term = timer("CL regularization", cl_regularization, (outputs.hidden_states,
-            #                                                                         initial_bert_model_output.hidden_states,
-            #                                                                         args))
             loss = outputs.loss
-            # cl_regularization_terms.append(cl_regularization_term.item())
-            if args.with_cl_regularization:
-                loss = loss + cl_regularization_term
+            if not turnoff_clr:
+                with torch.no_grad():
+                    batch.update({"output_hidden_states": True})
+                    initial_bert_model_output = timer("Bert output time", initial_bert_model, (), batch)
+
+                cl_regularization_term = timer("CL regularization", cl_regularization, (outputs.hidden_states,
+                                                                                        initial_bert_model_output.hidden_states,
+                                                                                        args))
+                cl_regularization_terms.append(cl_regularization_term.item())
+                if step % args.regularizer_append_steps == 0 or step == len(train_dataloader) - 1:
+                    basic_plotter.send_metrics(
+                        {"cl_regularizer_term": np.mean(cl_regularization_terms[-step:])})  # from last update
+                if args.with_cl_regularization:
+                    loss = loss + cl_regularization_term
 
             loss = loss / args.gradient_accumulation_steps
             train_losses.append(loss.item())
@@ -381,9 +389,7 @@ def train():
                 optimizer.zero_grad()
                 progress_bar.update(1)
                 completed_steps += 1
-            # if step % args.regularizer_append_steps == 0 or step == len(train_dataloader) - 1:
-            #     basic_plotter.send_metrics(
-            #         {"cl_regularizer_term": np.mean(cl_regularization_terms[-step:])})  # from last update
+
             if completed_steps >= args.max_train_steps:
                 break
 
