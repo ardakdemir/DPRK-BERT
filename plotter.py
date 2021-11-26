@@ -68,7 +68,7 @@ class BasicPlotter:
             plt.figure(figsize=(12, 8))
             plt.plot(v)
             plt.ylabel(k)
-            plt.xticks(np.arange(1,len(v)+1,max(1,len(v)//max_size)))
+            plt.xticks(np.arange(1,len(v)+1,max(1,len(v)//self.max_xticks)))
             plt.savefig(p)
             plt.close("all")
 
