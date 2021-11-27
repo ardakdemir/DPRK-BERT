@@ -715,6 +715,8 @@ def evaluate():
     config_name = args.config_name
     if args.model_name_or_path is not None:
         dprk_model_path = args.model_name_or_path
+    if args.cross_lingual_model_name_or_path is not None:
+        dprk_cl_model_path = args.cross_lingual_model_name_or_path
 
     model_dict = {"KR-BERT": {
         "model_name": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",

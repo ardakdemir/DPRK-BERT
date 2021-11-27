@@ -18,5 +18,5 @@ do
 
   model_path=${experiment_root}${my_save_folder}"/best_model_weights.pkh"
   #Eval
-  singularity exec  --nv  --writable ~/singularity/dprk-image python3 mlm_trainer.py --mode evaluate --save_folder ${my_evalsave_folder} --model_name_or_path ${model_path}
+  singularity exec  --nv  --writable ~/singularity/dprk-image python3 mlm_trainer.py --mode evaluate --save_folder ${my_evalsave_folder} --cross_lingual_model_name_or_path ${model_path}
 done

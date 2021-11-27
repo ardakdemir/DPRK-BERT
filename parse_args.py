@@ -77,6 +77,14 @@ def parse_args():
         required=False,
     )
     parser.add_argument(
+        "--cross_lingual_model_name_or_path",
+        type=str,
+        default=None,
+        help="Path to pretrained model or model identifier from huggingface.co/models.",
+        required=False,
+    )
+
+    parser.add_argument(
         "--config_name",
         type=str,
         default=None,
@@ -198,7 +206,7 @@ def parse_args():
         "--mlm_probability", type=float, default=0.15, help="Ratio of tokens to mask for masked language modeling loss"
     )
     parser.add_argument(
-        "--regularizer_weight", type=float, default=0.1, help="lambda for cross-lingual regularization "
+        "--regularizer_weight", type=float, default=0.5, help="lambda for cross-lingual regularization "
     )
     parser.add_argument("--push_to_hub", action="store_true", help="Whether or not to push the model to the Hub.")
     parser.add_argument(
