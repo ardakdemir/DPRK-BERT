@@ -32,6 +32,10 @@ def parse_args():
         help="A csv or a json file containing the validation data."
     )
     parser.add_argument(
+        "--validation_file2", type=str, default=None,
+        help="A csv or a json file containing the validation data."
+    )
+    parser.add_argument(
         "--validation_split_percentage",
         default=20,
         help="The percentage of the train set used as validation set in case there's no validation split",

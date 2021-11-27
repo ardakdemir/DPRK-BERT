@@ -283,8 +283,12 @@ def train():
         data_files["train"] = args.train_file
     if args.validation_file is not None:
         data_files["validation"] = args.validation_file
+
     extension = "json"
     raw_datasets = load_dataset(extension, data_files=data_files, field="data")
+    raw_val2_dataset = None
+    if args.validation_file2 is not None:
+        raw_val2_dataset = load_dataset(extension, data_files={"validation2":args.validation_file2}, field="data")
 
     max_seq_length = args.max_seq_length
     column_names = raw_datasets["train"].column_names
@@ -299,7 +303,7 @@ def train():
         tokenized_datasets[s] = tokenize_function(examples, tokenizer)
 
         # print(tokenizer_output)
-        print("Number of sentences: {}".format(len(tokenized_datasets[s])))
+        print("Number of sentences for {}: {}".format(s, len(tokenized_datasets[s])))
         #
         # with open(os.path.join(config_file.RODONG_MLM_ROOT, "tokenized_{}.json".format(s)), "w") as o:
         #     json.dump({"tokenized_data": tokenizer_output}, o)
@@ -315,6 +319,17 @@ def train():
         train_dataset, shuffle=True, collate_fn=data_collator, batch_size=args.per_device_train_batch_size
     )
     eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator, batch_size=args.per_device_eval_batch_size)
+    eval_dataloader2 = None
+
+    if args.validation_file2 is not None:
+        name = "validation2"
+        examples = raw_val2_dataset[name]
+        tokenized_datasets[name] = tokenize_function(examples, tokenizer)
+        print("Number of sentences for validation2: {}".format(len(tokenized_datasets[s])))
+        eval_dataset2 = tokenized_datasets[name]
+        eval_dataloader2 = DataLoader(eval_dataset2, collate_fn=data_collator,
+                                      batch_size=args.per_device_eval_batch_size)
+
     print("Train size: {}\tEval size: {}".format(len(train_dataloader), len(eval_dataloader)))
     # Optimizer
     # Split weights in two groups, one with weight decay and the other not.
@@ -376,10 +391,11 @@ def train():
                                                                                         initial_bert_model_output.hidden_states,
                                                                                         args))
                 cl_regularization_terms.append(cl_regularization_term.item())
-                epoch_clr_losses.append(np.round(cl_regularization_term.item(),3))
-                if (step+1) % args.regularizer_append_steps == 0 or step == len(train_dataloader) - 1:
+                epoch_clr_losses.append(np.round(cl_regularization_term.item(), 3))
+                if (step + 1) % args.regularizer_append_steps == 0 or step == len(train_dataloader) - 1:
                     basic_plotter.send_metrics(
-                        {"cl_regularizer_batch": np.round(np.mean(cl_regularization_terms[-step:]),3)}) # from last update
+                        {"cl_regularizer_batch": np.round(np.mean(cl_regularization_terms[-step:]),
+                                                          3)})  # from last update
                 if args.with_cl_regularization:
                     loss = loss + cl_regularization_term
             loss = loss / args.gradient_accumulation_steps
@@ -402,34 +418,54 @@ def train():
         train_epoch_time = round(epoch_end - epoch_begin, 3)
         basic_plotter.send_metrics({"train_loss": np.mean(train_losses),
                                     "train_epoch_time": train_epoch_time,
-                                    "clr_loss":np.round(np.mean(epoch_clr_losses),3)})
+                                    "clr_loss": np.round(np.mean(epoch_clr_losses), 3)})
         basic_plotter.store_json()
         model.eval()
         losses = []
         eval_begin = time.time()
-        for step, batch in enumerate(eval_dataloader):
-            batch = {k: v.to(device) for k, v in batch.items()}
-            with torch.no_grad():
-                outputs = model(**batch)
 
-            loss = outputs.loss
-            losses.append(loss)
-        losses = torch.stack(losses, dim=0)
-        losses = losses[: len(eval_dataset)]
+        # for step, batch in enumerate(eval_dataloader):
+        #     batch = {k: v.to(device) for k, v in batch.items()}
+        #     with torch.no_grad():
+        #         outputs = model(**batch)
+        #
+        #     loss = outputs.loss
+        #     losses.append(loss)
+        # losses = torch.stack(losses, dim=0)
+        # losses = losses[: len(eval_dataset)]
+        # eval_end = time.time()
+        # eval_time = round(eval_end - eval_begin, 3)
+        # try:
+        #     perplexity = math.exp(torch.mean(losses))
+        # except OverflowError:
+        #     perplexity = float("inf")
+        val_perplexity2, val_accuracy2 = 0, 0
+        print("Evaluating model on {}".format("validation1"))
+        val_perplexity, val_accuracy = evaluate_single_model(model, eval_dataloader, tokenizer=None,
+                                                             break_after=args.validation_steps)
+        if eval_dataloader2 is not None:
+            print("Evaluating model on {}".format("validation2"))
+            val_perplexity2, val_accuracy2 = evaluate_single_model(model, eval_dataloader2, tokenizer=None,
+                                                                   break_after=args.validation_steps)
+            avg_perplexity = (val_perplexity + val_perplexity2) / 2
+            avg_accuracy = (val_accuracy+val_accuracy2)/2
+        else:
+            avg_perplexity, avg_accuracy = val_perplexity, val_accuracy
         eval_end = time.time()
         eval_time = round(eval_end - eval_begin, 3)
-        try:
-            perplexity = math.exp(torch.mean(losses))
-        except OverflowError:
-            perplexity = float("inf")
-        basic_plotter.send_metrics({"validation_perplexity": perplexity, "validation_time": eval_time})
+
+        basic_plotter.send_metrics({"validation_perplexity": val_perplexity,
+                                    "validation_time": eval_time,
+                                    "validation_accuracy": val_accuracy,
+                                    "validation_perplexity2": val_perplexity2,
+                                    "val_accuracy2": val_accuracy2})
         # print(f"epoch {epoch}: perplexity: {perplexity}")
-        if perplexity < min_perplexity:
-            print("Saving best model with average perplexity of {} to: {}".format(perplexity, model_save_path))
+        if avg_perplexity < min_perplexity:
+            print("Saving best model with average perplexity of {} to: {}".format(avg_perplexity, model_save_path))
             best_model_weights = model.state_dict()
             torch.save(best_model_weights, model_save_path)
-            min_perplexity = perplexity
-    basic_plotter.store_json({"cl_regularization_terms":cl_regularization_terms})
+            min_perplexity = avg_perplexity
+    basic_plotter.store_json({"cl_regularization_terms": cl_regularization_terms})
     args_path = os.path.join(experiment_folder, "experiment_args.json")
     with open(args_path, "w") as o:
         json.dump(arg_dict, o)
@@ -439,15 +475,25 @@ def evaluate_single_model(model, dataloader, tokenizer=None, break_after=2):
     model.eval()
     losses = []
     eval_begin = time.time()
+    accuracy = 0
+    corrects = defaultdict(int)
+    total_examples = 0
+    model_name = "default_model"
     for step, batch in enumerate(dataloader):
         batch = {k: v.to(device) for k, v in batch.items()}
-
+        preds = {}
         with torch.no_grad():
             outputs = model(**batch)
         if tokenizer:
             analyze_mlm_prediction(tokenizer.tokenizer, batch, outputs)
         loss = outputs.loss
         losses.append(loss)
+        preds[model_name] = outputs.logits
+
+        batch_corrects, total_masks = get_corrects(batch, preds)
+        for k, c in batch_corrects.items():
+            corrects[k] += c
+        total_examples += total_masks
         if step > break_after:
             break
     losses = torch.stack(losses, dim=0)
@@ -457,8 +503,9 @@ def evaluate_single_model(model, dataloader, tokenizer=None, break_after=2):
         perplexity = math.exp(torch.mean(losses))
     except OverflowError:
         perplexity = float("inf")
-    print("Average Perplexity: {}".format(perplexity))
-    return perplexity
+    accuracy = round(100 * corrects[model_name] / total_examples, 3)
+    print("Average Perplexity: {} == Accuraccy: {}".format(perplexity, accuracy))
+    return perplexity, accuracy
 
 
 def evaluate_multiple_models_mlm_wrapper(model_dicts, dataset_path, repeat=5):
@@ -586,7 +633,7 @@ def evaluate_samemodels(model_paths, dataset_path, repeat=5):
             model.eval()
             losses = []
             eval_begin = time.time()
-            perplexity = evaluate_single_model(model, eval_dataloader, tokenizer)
+            perplexity, _ = evaluate_single_model(model, eval_dataloader, tokenizer)
             results[k].append(perplexity)
     print("Finished all evaluations...")
     print("Results", results)
