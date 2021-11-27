@@ -9,7 +9,7 @@ eval_save_folder=${2}
 num_train_epochs=${3}
 steps_per_epoch=${4}
 
-for r_w in 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1
+for r_w in 0.5 0.6 0.7 0.8 0.9 1
 do
   #Train models
   my_save_folder=${save_folder}"_clregularizer_weight_""${r_w//./-}"
