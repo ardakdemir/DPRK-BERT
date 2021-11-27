@@ -14,7 +14,7 @@ do
   #Train models
   my_save_folder=${save_folder}"_clregularizer_weight_""${r_w//./-}"
   my_evalsave_folder=${eval_save_folder}"_clregularizer_weight_""${r_w//./-}"
-  singularity exec  --nv  --writable ~/singularity/dprk-image python3 mlm_trainer.py --mode train --with_cl_regularization --num_train_epochs ${num_train_epochs} --steps_per_epoch ${steps_per_epoch} --save_folder ${my_save_folder}
+  singularity exec  --nv  --writable ~/singularity/dprk-image python3 mlm_trainer.py --mode train --with_cl_regularization  --regularizer_weight ${r_w}  --num_train_epochs ${num_train_epochs}--steps_per_epoch ${steps_per_epoch} --save_folder ${my_save_folder}
 
   model_path=${experiment_root}${my_save_folder}"/best_model_weights.pkh"
   #Eval

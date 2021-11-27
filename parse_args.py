@@ -133,12 +133,6 @@ def parse_args():
         help="Total number of steps per epoch (optional).",
     )
     parser.add_argument(
-        "--steps_per_epoch",
-        type=int,
-        default=1e9,
-        help="Total number of steps per epoch (optional).",
-    )
-    parser.add_argument(
         "--gradient_accumulation_steps",
         type=int,
         default=1,
