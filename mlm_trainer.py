@@ -361,6 +361,7 @@ def train():
     for epoch in range(args.num_train_epochs):
         model.train()
         train_losses = []
+        epoch_clr_losses = []
         epoch_begin = time.time()
         for step, batch in enumerate(train_dataloader):
             batch = {k: v.to(device) for k, v in batch.items()}
@@ -375,12 +376,12 @@ def train():
                                                                                         initial_bert_model_output.hidden_states,
                                                                                         args))
                 cl_regularization_terms.append(cl_regularization_term.item())
+                epoch_clr_losses.append(np.round(cl_regularization_term.item(),3))
                 if (step+1) % args.regularizer_append_steps == 0 or step == len(train_dataloader) - 1:
                     basic_plotter.send_metrics(
-                        {"cl_regularizer_batch": np.mean(cl_regularization_terms[-step:])})  # from last update
+                        {"cl_regularizer_batch": np.round(np.mean(cl_regularization_terms[-step:])},3)) # from last update
                 if args.with_cl_regularization:
                     loss = loss + cl_regularization_term
-
             loss = loss / args.gradient_accumulation_steps
             train_losses.append(loss.item())
             timer("Loss backward", loss.backward, ())
@@ -399,7 +400,9 @@ def train():
 
         epoch_end = time.time()
         train_epoch_time = round(epoch_end - epoch_begin, 3)
-        basic_plotter.send_metrics({"train_loss": np.mean(train_losses), "train_epoch_time": train_epoch_time})
+        basic_plotter.send_metrics({"train_loss": np.mean(train_losses),
+                                    "train_epoch_time": train_epoch_time,
+                                    "clr_loss":np.round(np.mean(epoch_clr_losses),3)})
         basic_plotter.store_json()
         model.eval()
         losses = []
