@@ -71,9 +71,10 @@ class BasicPlotter:
             plt.savefig(p)
             plt.close("all")
 
-    def store_json(self):
+    def store_json(self,additional_data={}):
         p = os.path.join(self.save_root, self.prefix + "training_metrics" + ".json")
         with open(p, "w") as j:
+            self.metrics.update(additional_data)
             json.dump(self.metrics, j)
 
 

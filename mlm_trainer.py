@@ -375,9 +375,9 @@ def train():
                                                                                         initial_bert_model_output.hidden_states,
                                                                                         args))
                 cl_regularization_terms.append(cl_regularization_term.item())
-                if step % args.regularizer_append_steps == 0 or step == len(train_dataloader) - 1:
+                if (step+1) % args.regularizer_append_steps == 0 or step == len(train_dataloader) - 1:
                     basic_plotter.send_metrics(
-                        {"cl_regularizer_term": np.mean(cl_regularization_terms[-step:])})  # from last update
+                        {"cl_regularizer_batch": np.mean(cl_regularization_terms[-step:])})  # from last update
                 if args.with_cl_regularization:
                     loss = loss + cl_regularization_term
 
@@ -400,7 +400,7 @@ def train():
         epoch_end = time.time()
         train_epoch_time = round(epoch_end - epoch_begin, 3)
         basic_plotter.send_metrics({"train_loss": np.mean(train_losses), "train_epoch_time": train_epoch_time})
-
+        basic_plotter.store_json()
         model.eval()
         losses = []
         eval_begin = time.time()
@@ -426,8 +426,8 @@ def train():
             best_model_weights = model.state_dict()
             torch.save(best_model_weights, model_save_path)
             min_perplexity = perplexity
-    basic_plotter.store_json()
-    args_path = os.path.join(save_folder, "experiment_args.json")
+    basic_plotter.store_json({"cl_regularization_terms":cl_regularization_terms})
+    args_path = os.path.join(experiment_folder, "experiment_args.json")
     with open(args_path, "w") as o:
         json.dump(arg_dict, o)
 

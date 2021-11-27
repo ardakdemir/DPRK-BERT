@@ -141,7 +141,7 @@ def parse_args():
     parser.add_argument(
         "--regularizer_append_steps",
         type=int,
-        default=5,
+        default=10,
         help="Number of batches before sending the regularization value to metrics.",
     )
     parser.add_argument(
