@@ -379,7 +379,7 @@ def train():
                 epoch_clr_losses.append(np.round(cl_regularization_term.item(),3))
                 if (step+1) % args.regularizer_append_steps == 0 or step == len(train_dataloader) - 1:
                     basic_plotter.send_metrics(
-                        {"cl_regularizer_batch": np.round(np.mean(cl_regularization_terms[-step:])},3)) # from last update
+                        {"cl_regularizer_batch": np.round(np.mean(cl_regularization_terms[-step:]),3)}) # from last update
                 if args.with_cl_regularization:
                     loss = loss + cl_regularization_term
             loss = loss / args.gradient_accumulation_steps
