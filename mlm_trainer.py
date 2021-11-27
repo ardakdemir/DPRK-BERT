@@ -288,7 +288,7 @@ def train():
     raw_datasets = load_dataset(extension, data_files=data_files, field="data")
     raw_val2_dataset = None
     if args.validation_file2 is not None:
-        raw_val2_dataset = load_dataset(extension, data_files={"validation2":args.validation_file2}, field="data")
+        raw_val2_dataset = load_dataset(extension, data_files={"validation2": args.validation_file2}, field="data")
 
     max_seq_length = args.max_seq_length
     column_names = raw_datasets["train"].column_names
@@ -373,11 +373,14 @@ def train():
     cl_regularization_terms = []
     all_train_losses = []
     all_eval_losses = []
+    early_stop = args.early_stop
     for epoch in range(args.num_train_epochs):
         model.train()
         train_losses = []
         epoch_clr_losses = []
         epoch_begin = time.time()
+        if early_stop < 0:
+            break
         for step, batch in enumerate(train_dataloader):
             batch = {k: v.to(device) for k, v in batch.items()}
             outputs = model(**batch, output_hidden_states=True)
@@ -447,10 +450,10 @@ def train():
             print("Evaluating model on {}".format("validation2"))
             val_perplexity2, val_accuracy2 = evaluate_single_model(model, eval_dataloader2, tokenizer=None,
                                                                    break_after=args.validation_steps)
-            avg_perplexity = (val_perplexity + val_perplexity2) / 2
-            avg_accuracy = (val_accuracy+val_accuracy2)/2
+            avg_perplexity = (np.log(val_perplexity) + np.log(val_perplexity2)) / 2
+            avg_accuracy = (val_accuracy + val_accuracy2) / 2
         else:
-            avg_perplexity, avg_accuracy = val_perplexity, val_accuracy
+            avg_perplexity, avg_accuracy = np.log(val_perplexity), val_accuracy
         eval_end = time.time()
         eval_time = round(eval_end - eval_begin, 3)
 
@@ -461,10 +464,13 @@ def train():
                                     "val_accuracy2": val_accuracy2})
         # print(f"epoch {epoch}: perplexity: {perplexity}")
         if avg_perplexity < min_perplexity:
-            print("Saving best model with average perplexity of {} to: {}".format(avg_perplexity, model_save_path))
+            print("Saving best model with average log perplexity of {} to: {}".format(avg_perplexity, model_save_path))
             best_model_weights = model.state_dict()
             torch.save(best_model_weights, model_save_path)
             min_perplexity = avg_perplexity
+            early_stop = args.early_stop  # reset the time
+        else:
+            early_stop -= 1  # decrement early stop
     basic_plotter.store_json({"cl_regularization_terms": cl_regularization_terms})
     args_path = os.path.join(experiment_folder, "experiment_args.json")
     with open(args_path, "w") as o:
