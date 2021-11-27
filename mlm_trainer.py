@@ -654,8 +654,10 @@ def evaluate_model_perplexity(model_paths, dataset_path, repeat=5):
 
 def evaluate():
     args = parse_args()
-    dprk_model_path = "../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh"
-    dprk_cl_model_path = "../experiment_outputs/withclr_2611_1532/best_model_weights.pkh"
+    # dprk_model_path = "../experiment_outputs/2021-10-17_02-36-11/best_model_weights.pkh" #This one is mayybe dprk from scratch
+    dprk_model_path = '../DPRK-BERT-model/dprk-model/best_model_weights.pkh'
+    # dprk_cl_model_path = "../experiment_outputs/withclr_2611_1532/best_model_weights.pkh"
+    dprk_cl_model_path = "../experiment_outputs/mlmtrain_withclregular_2611_2300_train/best_model_weights.pkh"
     tokenizer_name = args.tokenizer_name
     config_name = args.config_name
     if args.model_name_or_path is not None:
@@ -672,14 +674,14 @@ def evaluate():
         "DPRK-BERT": {"model_name": dprk_model_path,
                       "tokenizer": tokenizer_name,
                       "config_name": config_name},
-        # "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
-        #                    "tokenizer": "snunlp/KR-Medium",
-        #                    "config_name": "snunlp/KR-Medium",
-        #                    "from_pretrained": True},
-        # "mBERT": {"model_name": "bert-base-multilingual-cased",
-        #           "tokenizer": "bert-base-multilingual-cased",
-        #           "config_name": "bert-base-multilingual-cased",
-        #           "from_pretrained": True}
+        "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
+                           "tokenizer": "snunlp/KR-Medium",
+                           "config_name": "snunlp/KR-Medium",
+                           "from_pretrained": True},
+        "mBERT": {"model_name": "bert-base-multilingual-cased",
+                  "tokenizer": "bert-base-multilingual-cased",
+                  "config_name": "bert-base-multilingual-cased",
+                  "from_pretrained": True}
     }
     dataset_path = args.validation_file
     prefix = "comparison"
