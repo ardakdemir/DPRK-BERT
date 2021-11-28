@@ -8,6 +8,13 @@ save_folder=${1}
 eval_save_folder=${2}
 num_train_epochs=${3}
 steps_per_epoch=${4}
+
+save_folder=${1}
+eval_save_folder=${2}
+num_train_epochs=${3}
+steps_per_epoch=${4}
+validation_steps=${5}
+
 #Train models
 singularity exec  --nv  --writable ~/singularity/dprk-image python3 mlm_trainer.py --mode train --num_train_epochs ${num_train_epochs} --steps_per_epoch ${steps_per_epoch} --save_folder ${save_folder}
 

@@ -536,7 +536,7 @@ def evaluate_multiple_models_mlm_wrapper(model_dicts, dataset_path, repeat=5):
 
         data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer.tokenizer,
                                                         mlm_probability=args.mlm_probability)
-        eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator,
+        eval_dataloader = DataLoader(eval_dataset, collate_fn=data_collator,shuffle=True, # Shuffle during evaluation
                                      batch_size=args.per_device_eval_batch_size)
         dataloaders[tokenizer_name] = eval_dataloader
     all_results = {}
