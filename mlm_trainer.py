@@ -726,17 +726,17 @@ def evaluate():
             "model_name": dprk_cl_model_path,
             "tokenizer": None,
             "config_name": None},
-        # "DPRK-BERT": {"model_name": dprk_model_path,
-        #               "tokenizer": tokenizer_name,
-        #               "config_name": config_name},
-        # "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
-        #                    "tokenizer": "snunlp/KR-Medium",
-        #                    "config_name": "snunlp/KR-Medium",
-        #                    "from_pretrained": True},
-        # "mBERT": {"model_name": "bert-base-multilingual-cased",
-        #           "tokenizer": "bert-base-multilingual-cased",
-        #           "config_name": "bert-base-multilingual-cased",
-        #           "from_pretrained": True}
+        "DPRK-BERT": {"model_name": dprk_model_path,
+                      "tokenizer": tokenizer_name,
+                      "config_name": config_name},
+        "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
+                           "tokenizer": "snunlp/KR-Medium",
+                           "config_name": "snunlp/KR-Medium",
+                           "from_pretrained": True},
+        "mBERT": {"model_name": "bert-base-multilingual-cased",
+                  "tokenizer": "bert-base-multilingual-cased",
+                  "config_name": "bert-base-multilingual-cased",
+                  "from_pretrained": True}
     }
     dataset_path = args.validation_file
     prefix = "comparison"
