@@ -460,6 +460,8 @@ def train():
         basic_plotter.send_metrics({"validation_perplexity": val_perplexity,
                                     "validation_time": eval_time,
                                     "validation_accuracy": val_accuracy,
+                                    'avg_log_perplexity': avg_perplexity,
+                                    "avg_accuracy": avg_accuracy,
                                     "validation_perplexity2": val_perplexity2,
                                     "val_accuracy2": val_accuracy2})
         # print(f"epoch {epoch}: perplexity: {perplexity}")
