@@ -748,7 +748,7 @@ def evaluate():
         #           "tokenizer": "bert-base-multilingual-cased",
         #           "config_name": "bert-base-multilingual-cased",
         #           "from_pretrained": True}
-    }
+    # }
     dataset_path = args.validation_file
     prefix = "comparison"
 
