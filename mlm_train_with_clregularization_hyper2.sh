@@ -26,7 +26,7 @@ do
   my_evalsave_folder=${eval_save_folder}"_kornli_clregularizer_weight_""${r_w//./-}"
   singularity exec  --nv  --writable ~/singularity/dprk-image python3 mlm_trainer.py --mode evaluate --validation_file ../dprk-bert-data/KoRxnli-test-mlm-ko.json --save_folder ${my_evalsave_folder} --cross_lingual_model_name_or_path ${model_path} --validation_steps ${validation_steps}
 
-  #Eval
+  #Eval newyear
   my_evalsave_folder=${eval_save_folder}"_newyear_clregularizer_weight_""${r_w//./-}"
   singularity exec  --nv  --writable ~/singularity/dprk-image python3 mlm_trainer.py --mode evaluate --validation_file ../dprk-bert-data/new_year_mlm_data/newyear_train.json --save_folder ${my_evalsave_folder} --cross_lingual_model_name_or_path ${model_path} --validation_steps ${validation_steps}
 done

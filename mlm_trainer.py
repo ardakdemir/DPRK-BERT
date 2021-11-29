@@ -715,20 +715,28 @@ def evaluate():
     dprk_cl_model_path = "../experiment_outputs/mlmtrain_withclregular_2611_2300_train/best_model_weights.pkh"
     tokenizer_name = args.tokenizer_name
     config_name = args.config_name
+    model_dict = {}
     if args.model_name_or_path is not None:
         dprk_model_path = args.model_name_or_path
+        model_dict.update({"DPRK-BERT": {
+            "model_name": dprk_cl_model_path,
+            "tokenizer": None,
+            "config_name": None}})
     if args.cross_lingual_model_name_or_path is not None:
         dprk_cl_model_path = args.cross_lingual_model_name_or_path
-
-    model_dict = {
+        model_dict.update({"KR-BERT-CL": {
+            "model_name": dprk_cl_model_path,
+            "tokenizer": None,
+            "config_name": None}})
+    # model_dict = {
         # "KR-BERT": {
         # "model_name": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",
         # "tokenizer": None,
         # "config_name": None},
-        "KR-BERT-CL": {
-            "model_name": dprk_cl_model_path,
-            "tokenizer": None,
-            "config_name": None},
+        # "KR-BERT-CL": {
+        #     "model_name": dprk_cl_model_path,
+        #     "tokenizer": None,
+        #     "config_name": None},
         # "DPRK-BERT": {"model_name": dprk_model_path,
         #               "tokenizer": tokenizer_name,
         #               "config_name": config_name},

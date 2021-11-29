@@ -14,5 +14,15 @@ steps_per_epoch=${4}
 singularity exec  --nv  --writable ~/singularity/dprk-image python3 mlm_trainer.py --mode train --num_train_epochs ${num_train_epochs} --steps_per_epoch ${steps_per_epoch} --save_folder ${save_folder}
 
 model_path=${experiment_root}${save_folder}"/best_model_weights.pkh"
-#Eval
-singularity exec  --nv  --writable ~/singularity/dprk-image python3 mlm_trainer.py --mode evaluate --save_folder ${eval_save_folder} --model_name_or_path ${model_path}
+
+#Eval Rodong
+my_evalsave_folder=${eval_save_folder}"_rodong"
+singularity exec  --nv  --writable ~/singularity/dprk-image python3 mlm_trainer.py --mode evaluate --save_folder ${my_evalsave_folder} --model_name_or_path ${model_path}
+
+#Eval kornli
+my_evalsave_folder=${eval_save_folder}"_kornli"
+singularity exec  --nv  --writable ~/singularity/dprk-image python3 mlm_trainer.py --mode evaluate --validation_file ../dprk-bert-data/KoRxnli-test-mlm-ko.json --save_folder ${my_evalsave_folder} --model_name_or_path ${model_path}
+
+#Eval newyear
+my_evalsave_folder=${eval_save_folder}"_newyear"
+singularity exec  --nv  --writable ~/singularity/dprk-image python3 mlm_trainer.py --mode evaluate --validation_file ../dprk-bert-data/new_year_mlm_data/newyear_train.json --save_folder ${my_evalsave_folder} --model_name_or_path ${model_path}
