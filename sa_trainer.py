@@ -66,7 +66,8 @@ def parse_args():
     parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay to use.")
     parser.add_argument("--num_train_epochs", type=int, default=10, help="Total number of training epochs to perform.")
     parser.add_argument("--steps_per_epoch", type=int, default=1e9, help="Number of steps per epoch.")
-    parser.add_argument("--batch_size", type=int, default=4, help="batch size")
+    parser.add_argument("--batch_size", type=int, default=8, help="batch size")
+    parser.add_argument("--dropout_rate", type=float, default=0.3, help="dropout_rate")
 
     args = parser.parse_args()
     return args
@@ -233,6 +234,8 @@ def main():
     num_classes = 2
     config = init_config()
     weight_file_path = args.weight_file_path
+    dropout_rate = args.dropout_rate
+    config.hidden_dropout_prob = dropout_rate
     bert_weight_file_path = args.bert_weight_file_path
     sa_model = init_sa_model(num_classes, config, weight_file_path=weight_file_path,
                              bert_weight_file_path=bert_weight_file_path)
