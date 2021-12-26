@@ -189,6 +189,7 @@ def train(model, data_dict, args):
                 if k == "train":
                     loss.backward()
                     optimizer.step()
+                    optimizer.zero_grad()
                 step += 1
                 if step > args.steps_per_epoch:
                     break
@@ -260,11 +261,12 @@ def main():
         dl = DataLoader(dataset, batch_size=args.batch_size, collate_fn=collate_function)
         data_loaders[s] = dl
 
-    # train
+    # train-test
     args.label_vocab = label_vocab
     best_model, train_summary = train(sa_model, data_loaders, args)
-    # test
-
+    basic_plotter.send_metrics({"test_loss":train_summary["all_losses"]["test"],
+                                "train_loss":train_summary["all_losses"]["train"],
+                                "test_acc"})
     # print results
     s_p = os.path.join(experiment_folder, "label_vocab.json")
     with open(s_p, "w") as o:

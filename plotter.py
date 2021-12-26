@@ -60,7 +60,10 @@ class BasicPlotter:
     def send_metrics(self, metrics):
         old_metrics = self.metrics
         for k, v in metrics.items():
-            old_metrics[k].append(v)
+            if type(v) == list:
+                old_metrics[k].extend(v)
+            else:
+                old_metrics[k].append(v)
 
         for k, v in old_metrics.items():
             p = os.path.join(self.save_root, self.prefix + k + ".png")
