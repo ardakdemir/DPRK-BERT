@@ -251,7 +251,7 @@ def main():
         tokenized_datasets[s] = tokenized_samples
     for s in file_names:
         dataset = tokenized_datasets[s]
-        print(f"Sample from {s}", len(dataset[0]), len(dataset[1]), dataset[0])
+        # print(f"Sample from {s}", len(dataset[0]), len(dataset[1]), dataset[0])
         dl = DataLoader(dataset, batch_size=args.batch_size, collate_fn=collate_function)
         data_loaders[s] = dl
 
