@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument(
         "--dataset_folder",
         type=str,
-        default="../dprk-bert-data/dprk_sentiment_data_2612",
+        default="../DPRK-BERT-model/dprk-model/best_model_weights.pkh",
         help="The name of the dataset to use (via the datasets library).",
     )
     parser.add_argument(
