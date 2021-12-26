@@ -235,7 +235,6 @@ def tokenize_function(examples, tokenizer, max_seq_length=512, text_column_name=
         line for example in examples for line in example[text_column_name].split("\n") if
         len(line) > 0 and not line.isspace()
     ]
-
     return [tokenizer.tokenize(
         example,
         {"padding": True,
@@ -397,7 +396,7 @@ def train():
                 epoch_clr_losses.append(np.round(cl_regularization_term.item(), 3))
                 if (step + 1) % args.regularizer_append_steps == 0 or step == len(train_dataloader) - 1:
                     basic_plotter.send_metrics(
-                        {"cl_regularizer_batch": np.round(np.mean(cl_regularization_terms[-step:]),
+                        {"cl_regularizer_batch": np.round(np.mean(cl_regularization_terms[-args.regularizer_append_steps:]),
                                                           3)})  # from last update
                 if args.with_cl_regularization:
                     loss = loss + cl_regularization_term
@@ -414,7 +413,7 @@ def train():
             if completed_steps >= args.max_train_steps:
                 break
 
-            if step >= args.steps_per_epoch:
+            if step >= args.steps_per_epoch-1:
                 break
 
         epoch_end = time.time()

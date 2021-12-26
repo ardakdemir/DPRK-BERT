@@ -50,7 +50,7 @@ def parse_args():
     parser.add_argument(
         "--save_folder",
         type=str,
-        default="rodong_mlm_training_data_1910",
+        default="rodong_mlm_training_data_1912",
         help="Save folder for dataset",
     )
     args = parser.parse_args()

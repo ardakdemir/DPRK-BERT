@@ -12,6 +12,52 @@ translator = Translator(service_urls=[
 ])
 
 
+def measure_classification_accuracy(preds, truths, label_map={"pos": 1, "neg": 0}):
+    tp = 0
+    fp = 0
+    tn = 0
+    fn = 0
+    total = 0
+    wrong_inds = []
+    for i, (l, p) in enumerate(zip(truths, preds)):
+        total += 1
+        if l == p:
+            if l == 1:
+                tp += 1
+            else:
+                tn += 1
+        else:
+            if l == label_map["neg"]:
+                fn += 1
+            else:
+                fp += 1
+        wrong_inds.append(i)
+    acc = (tp + tn) / total
+    try:
+        recall = tp / (fn + tp)
+    except:
+        recall = 0
+    try:
+        precision = tp / (fp + tp)
+    except:
+        precision = 0
+    if precision + recall > 0:
+        f1 = (2 * recall * precision) / (precision + recall)
+    else:
+        f1 = 0
+
+    return {"f1": f1,
+            "acc": acc,
+            "precision": precision,
+            "recall": recall,
+            "tp": tp,
+            "fp": fp,
+            "tn": tn,
+            "fn": fn,
+            "wrong_inds": wrong_inds
+            }
+
+
 def get_google_translations(sentences):
     return [translator.translate(s, src="ko").text for s in sentences]
 
