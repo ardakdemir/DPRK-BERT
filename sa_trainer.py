@@ -265,8 +265,7 @@ def main():
     args.label_vocab = label_vocab
     best_model, train_summary = train(sa_model, data_loaders, args)
     basic_plotter.send_metrics({"test_loss":train_summary["all_losses"]["test"],
-                                "train_loss":train_summary["all_losses"]["train"],
-                                "test_acc"})
+                                "train_loss":train_summary["all_losses"]["train"]})
     # print results
     s_p = os.path.join(experiment_folder, "label_vocab.json")
     with open(s_p, "w") as o:
