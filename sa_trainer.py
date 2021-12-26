@@ -264,7 +264,12 @@ def main():
     s_p = os.path.join(experiment_folder, "label_vocab.json")
     with open(s_p, "w") as o:
         json.dump(label_vocab, o)
+    s_p = os.path.join(experiment_folder, "train_summary.json")
+    with open(s_p, "w") as o:
+        json.dump(train_summary, o)
 
+    model_save_path = os.path.join(experiment_folder, "best_model_weights.pkh")
+    torch.save(best_model, model_save_path)
 
 if __name__ == "__main__":
     main()
