@@ -112,14 +112,13 @@ def collate_function(batch, pad_id=0):
     return {k: torch.tensor([p[k] for p in prepared_batch]) for k in pad_map}
 
 
-def prepare_dataset(examples, tokenizer, max_seq_length=512, text_column_name="data"):
+def prepare_dataset(examples, tokenizer, label_vocab = None, max_seq_length=512, text_column_name="data"):
     # Remove empty lines
     sentences = [
         line for example in examples for line in example[text_column_name].split("\n") if
         len(line) > 0 and not line.isspace()
     ]
     tokenized_data = []
-    label_vocab = {}
     for e, sentence in zip(examples, sentences):
         tokenized_input = tokenizer.tokenize(sentence,
                                              {"padding": True,
@@ -247,8 +246,14 @@ def main():
 
     for s in file_names:
         examples = data_dict[s]
-        tokenized_samples, label_vocab = prepare_dataset(examples, tokenizer)
-        tokenized_datasets[s] = tokenized_samples
+    train_examples = data_dict["train"]
+    tokenized_samples, label_vocab = prepare_dataset(train_examples, tokenizer)
+    tokenized_datasets["train"] = tokenized_samples
+
+    test_examples = data_dict["test"]
+    tokenized_samples, label_vocab = prepare_dataset(test_examples, tokenizer,label_vocab=label_vocab)
+    tokenized_datasets["test"] = tokenized_samples
+
     for s in file_names:
         dataset = tokenized_datasets[s]
         # print(f"Sample from {s}", len(dataset[0]), len(dataset[1]), dataset[0])
