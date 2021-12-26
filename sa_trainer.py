@@ -64,7 +64,7 @@ def parse_args():
         help="Initial learning rate (after the potential warmup period) to use.",
     )
     parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay to use.")
-    parser.add_argument("--num_train_epochs", type=int, default=20, help="Total number of training epochs to perform.")
+    parser.add_argument("--num_train_epochs", type=int, default=10, help="Total number of training epochs to perform.")
     parser.add_argument("--steps_per_epoch", type=int, default=1e9, help="Number of steps per epoch.")
     parser.add_argument("--batch_size", type=int, default=4, help="batch size")
 
@@ -112,7 +112,7 @@ def collate_function(batch, pad_id=0):
     return {k: torch.tensor([p[k] for p in prepared_batch]) for k in pad_map}
 
 
-def prepare_dataset(examples, tokenizer, label_vocab = None, max_seq_length=512, text_column_name="data"):
+def prepare_dataset(examples, tokenizer, label_vocab = {}, max_seq_length=512, text_column_name="data"):
     # Remove empty lines
     sentences = [
         line for example in examples for line in example[text_column_name].split("\n") if
