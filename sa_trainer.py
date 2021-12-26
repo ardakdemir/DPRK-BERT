@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument(
         "--dataset_folder",
         type=str,
-        default="../DPRK-BERT-model/dprk-model/best_model_weights.pkh",
+        default="../dprk-bert-data/dprk_sentiment_data_2612",
         help="The name of the dataset to use (via the datasets library).",
     )
     parser.add_argument(
@@ -53,7 +53,7 @@ def parse_args():
     parser.add_argument(
         "--weight_file_path",
         type=str,
-        default="../dprk-important-experiments/mlmtrain_NOclregular_2611_2300_train/best_model_weights.pkh",
+        default="../DPRK-BERT-model/dprk-model/best_model_weights.pkh",
         help="path to best model weights.",
     )
 
