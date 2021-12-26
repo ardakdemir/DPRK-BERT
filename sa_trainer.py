@@ -197,11 +197,12 @@ def train(model, data_dict, args):
             all_losses[k].append(mean_loss)
             result = utils.measure_classification_accuracy(preds, truths, label_map=label_map)
             result_wo_indices = {k: v for k, v in result.items() if k != "wrong_inds"}
+            acc = result["acc"]
             print("Results for {}: ".format(k), result_wo_indices)
-            if k == "test" and mean_loss < best_loss:
-                print("Found best model at {} epoch".format(n))
+            if k == "test" and acc > best_acc:
+                print("Found best model at {} epoch with acc: {}".format(n,acc))
                 print("Result",result_wo_indices)
-                best_loss = mean_loss
+                best_acc = acc
                 best_model_weights = model.state_dict()
             epoch_results[k] = result
 
