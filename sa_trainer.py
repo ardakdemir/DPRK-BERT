@@ -14,6 +14,8 @@ from torch.nn import CrossEntropyLoss, MSELoss, BCEWithLogitsLoss
 from torch.utils.data import DataLoader
 import argparse
 import utils
+import subprocess
+from itertools import product
 from transformers import (BertConfig, BertModel,
                           BertForPreTraining,
                           BertTokenizer,
@@ -113,7 +115,7 @@ def collate_function(batch, pad_id=0):
     return {k: torch.tensor([p[k] for p in prepared_batch]) for k in pad_map}
 
 
-def prepare_dataset(examples, tokenizer, label_vocab = {}, max_seq_length=512, text_column_name="data"):
+def prepare_dataset(examples, tokenizer, label_vocab={}, max_seq_length=512, text_column_name="data"):
     # Remove empty lines
     sentences = [
         line for example in examples for line in example[text_column_name].split("\n") if
@@ -201,14 +203,15 @@ def train(model, data_dict, args):
             acc = result["acc"]
             print("Results for {}: ".format(k), result_wo_indices)
             if k == "test" and acc > best_acc:
-                print("Found best model at {} epoch with acc: {}".format(n,acc))
-                print("Result",result_wo_indices)
+                print("Found best model at {} epoch with acc: {}".format(n, acc))
+                print("Result", result_wo_indices)
                 best_acc = acc
                 best_model_weights = model.state_dict()
             epoch_results[k] = result
 
         train_summary[f"epoch_{n}"] = epoch_results
     train_summary["all_losses"] = all_losses
+    train_summary["best_test_acc"] = best_acc
 
     return best_model_weights, train_summary
 
@@ -217,69 +220,97 @@ def main():
     args = parse_args()
     save_folder = args.save_folder
     prefix = args.prefix
+
+    dropout = np.arange(0, 0.55, 0.05)
+    learning_rate = [5e-5, 5e-4, 1e-4, 1e-3, 5e-3]
+    best_model = None
+    best_metric = 0
+
     # init save_folders
     if save_folder is None:
         save_folder = get_exp_name(prefix)
-    experiment_folder = os.path.join(config_file.OUTPUT_FOLDER, save_folder)
 
-    plot_save_folder = os.path.join(experiment_folder, "plots")
-    basic_plotter = BasicPlotter(plot_save_folder)
+    for index, c in tqdm(enumerate(product(dropout, learning_rate)), desc="Hyperparam search"):
+        d_r, l_r = c
+        args.dropout_rate = d_r
+        args.learning_rate = l_r
+        print("Running for {}".format(d_r, l_r))
 
-    # read data
-    dataset_folder = args.dataset_folder
-    file_names = ["train", "test"]
-    data_dict = read_data_from_folder(dataset_folder, file_names)
+        experiment_folder = os.path.join(config_file.OUTPUT_FOLDER, save_folder, str(index))
+        if not os.path.exists(experiment_folder):
+            os.makedirs(experiment_folder)
+        plot_save_folder = os.path.join(experiment_folder, "plots")
+        basic_plotter = BasicPlotter(plot_save_folder)
 
-    # init model
-    num_classes = 2
-    config = init_config()
-    weight_file_path = args.weight_file_path
-    dropout_rate = args.dropout_rate
-    config.hidden_dropout_prob = dropout_rate
-    bert_weight_file_path = args.bert_weight_file_path
-    sa_model = init_sa_model(num_classes, config, weight_file_path=weight_file_path,
-                             bert_weight_file_path=bert_weight_file_path)
+        # read data
+        dataset_folder = args.dataset_folder
+        file_names = ["train", "test"]
+        data_dict = read_data_from_folder(dataset_folder, file_names)
 
-    # init tokenizer
-    tokenizer, tokenizer_name = init_tokenizer(from_pretrained=False)
-    print("Tokenizer", tokenizer_name)
+        # init model
+        num_classes = 2
+        config = init_config()
+        weight_file_path = args.weight_file_path
+        dropout_rate = args.dropout_rate
+        config.hidden_dropout_prob = dropout_rate
+        bert_weight_file_path = args.bert_weight_file_path
+        sa_model = init_sa_model(num_classes, config, weight_file_path=weight_file_path,
+                                 bert_weight_file_path=bert_weight_file_path)
 
-    # init dataset
-    tokenized_datasets = {}
-    data_loaders = {}
-    label_vocab = None
+        # init tokenizer
+        tokenizer, tokenizer_name = init_tokenizer(from_pretrained=False)
+        print("Tokenizer", tokenizer_name)
 
-    for s in file_names:
-        examples = data_dict[s]
-    train_examples = data_dict["train"]
-    tokenized_samples, label_vocab = prepare_dataset(train_examples, tokenizer)
-    tokenized_datasets["train"] = tokenized_samples
+        # init dataset
+        tokenized_datasets = {}
+        data_loaders = {}
+        label_vocab = None
 
-    test_examples = data_dict["test"]
-    tokenized_samples, label_vocab = prepare_dataset(test_examples, tokenizer,label_vocab=label_vocab)
-    tokenized_datasets["test"] = tokenized_samples
+        for s in file_names:
+            examples = data_dict[s]
+        train_examples = data_dict["train"]
+        tokenized_samples, label_vocab = prepare_dataset(train_examples, tokenizer)
+        tokenized_datasets["train"] = tokenized_samples
 
-    for s in file_names:
-        dataset = tokenized_datasets[s]
-        # print(f"Sample from {s}", len(dataset[0]), len(dataset[1]), dataset[0])
-        dl = DataLoader(dataset, batch_size=args.batch_size, collate_fn=collate_function)
-        data_loaders[s] = dl
+        test_examples = data_dict["test"]
+        tokenized_samples, label_vocab = prepare_dataset(test_examples, tokenizer, label_vocab=label_vocab)
+        tokenized_datasets["test"] = tokenized_samples
 
-    # train-test
-    args.label_vocab = label_vocab
-    best_model, train_summary = train(sa_model, data_loaders, args)
-    basic_plotter.send_metrics({"test_loss":train_summary["all_losses"]["test"],
-                                "train_loss":train_summary["all_losses"]["train"]})
-    # print results
-    s_p = os.path.join(experiment_folder, "label_vocab.json")
-    with open(s_p, "w") as o:
-        json.dump(label_vocab, o)
-    s_p = os.path.join(experiment_folder, "train_summary.json")
-    with open(s_p, "w") as o:
-        json.dump(train_summary, o)
+        for s in file_names:
+            dataset = tokenized_datasets[s]
+            # print(f"Sample from {s}", len(dataset[0]), len(dataset[1]), dataset[0])
+            dl = DataLoader(dataset, batch_size=args.batch_size, collate_fn=collate_function)
+            data_loaders[s] = dl
 
-    model_save_path = os.path.join(experiment_folder, "best_model_weights.pkh")
-    torch.save(best_model, model_save_path)
+        # train-test
+        args.label_vocab = label_vocab
+        best_model, train_summary = train(sa_model, data_loaders, args)
+        basic_plotter.send_metrics({"test_loss": train_summary["all_losses"]["test"],
+                                    "train_loss": train_summary["all_losses"]["train"]})
+
+        # print results
+        root_folder = os.path.join(config_file.OUTPUT_FOLDER, save_folder, "best_results")
+        s_p = os.path.join(experiment_folder, "label_vocab.json")
+        with open(s_p, "w") as o:
+            json.dump(label_vocab, o)
+        s_p = os.path.join(experiment_folder, "train_summary.json")
+        with open(s_p, "w") as o:
+            json.dump(train_summary, o)
+        s_p = os.path.join(experiment_folder, "args.json")
+        with open(s_p, "w") as o:
+            json.dump(vars(args), o)
+        model_save_path = os.path.join(experiment_folder, "best_model_weights.pkh")
+        torch.save(best_model, model_save_path)
+
+        # copy best model
+        test_acc = train_summary["best_test_acc"]
+        if test_acc > best_metric:
+            best_metric = test_acc
+            print("Best model so far achieved at {}".format(index))
+            best_model_root = os.path.join(config_file.OUTPUT_FOLDER, save_folder, "best_model_folder")
+            cmd = "scp -r {}/ {}".format(experiment_folder, best_model_root)
+            subprocess.call(cmd, shell=True)
+
 
 if __name__ == "__main__":
     main()
