@@ -308,7 +308,7 @@ def main():
             best_metric = test_acc
             print("Best model so far achieved at {}".format(index))
             best_model_root = os.path.join(config_file.OUTPUT_FOLDER, save_folder, "best_model_folder")
-            cmd = "scp -r {}/ {}".format(experiment_folder, best_model_root)
+            cmd = "cp -r {}/ {}".format(experiment_folder, best_model_root)
             subprocess.call(cmd, shell=True)
 
 
