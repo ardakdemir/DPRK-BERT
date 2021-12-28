@@ -55,21 +55,22 @@ def parse_args():
     parser.add_argument(
         "--weight_file_path",
         type=str,
-        default="../DPRK-BERT-model/dprk-model/best_model_weights.pkh",
+        # default="../DPRK-BERT-model/dprk-model/best_model_weights.pkh",
+        default=None,
         help="path to best model weights.",
     )
 
     parser.add_argument(
         "--learning_rate",
         type=float,
-        default=5e-5,
+        default=1e-4,
         help="Initial learning rate (after the potential warmup period) to use.",
     )
     parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay to use.")
-    parser.add_argument("--num_train_epochs", type=int, default=10, help="Total number of training epochs to perform.")
+    parser.add_argument("--num_train_epochs", type=int, default=20, help="Total number of training epochs to perform.")
     parser.add_argument("--steps_per_epoch", type=int, default=1e9, help="Number of steps per epoch.")
     parser.add_argument("--batch_size", type=int, default=8, help="batch size")
-    parser.add_argument("--dropout_rate", type=float, default=0.3, help="dropout_rate")
+    parser.add_argument("--dropout_rate", type=float, default=0.15, help="dropout_rate")
 
     args = parser.parse_args()
     return args
@@ -222,7 +223,9 @@ def main():
     prefix = args.prefix
 
     dropout = np.arange(0, 0.55, 0.05)
-    learning_rate = [5e-5, 5e-4, 1e-4, 1e-3, 5e-3]
+    # learning_rate = [5e-5, 5e-4, 1e-4, 1e-3, 5e-3]
+    learning_rate = [args.learning_rate]
+    dropout = [args.dropout_rate]
     best_model = None
     best_metric = 0
 
