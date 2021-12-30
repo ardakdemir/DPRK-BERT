@@ -56,7 +56,7 @@ def parse_args():
         "--weight_file_path",
         type=str,
         default="../DPRK-BERT-model/dprk-model/best_model_weights.pkh",
-        default=None,
+        # default=None,
         help="path to best model weights.",
     )
 
