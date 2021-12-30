@@ -55,7 +55,7 @@ def parse_args():
     parser.add_argument(
         "--weight_file_path",
         type=str,
-        # default="../DPRK-BERT-model/dprk-model/best_model_weights.pkh",
+        default="../DPRK-BERT-model/dprk-model/best_model_weights.pkh",
         default=None,
         help="path to best model weights.",
     )
