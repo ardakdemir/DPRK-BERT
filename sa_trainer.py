@@ -89,6 +89,19 @@ def init_config(config_name=None):
     return config
 
 
+def write_wrong_examples(wrong_examples,tokenizer,wrong_save_path):
+    s = []
+    s.append("Sentence\tprediction\tlabel")
+    for e in wrong_examples:
+        input_ids,label_dict = e
+        pred = label_dict["pred"]
+        label = label_dict["label"]
+        tokens = tokenizer.tokenizer.convert_ids_to_tokens(input_ids[:input_ids.index(3)])
+        detokenized = tokenizer.detokenize(tokens)
+        s.append("\t".join([detokenized,pred,label]) )
+    with open(wrong_save_path,"w") as o:
+        o.write("\n".join(s))
+
 def init_sa_model(num_classes, config, weight_file_path=None, bert_weight_file_path=None):
     sentence_classifier = SentenceClassifier(config, num_classes)
     if weight_file_path:
@@ -143,6 +156,7 @@ def train(model, data_dict, args):
     best_model_weights = None
     best_acc = 0
     best_loss = 1e9
+    best_result = None
 
     train_summary = {}
 
@@ -168,7 +182,9 @@ def train(model, data_dict, args):
             if k == "train":
                 model.train()
             step = 0
+            examples = []
             for i, batch in tqdm(enumerate(data), desc="Iteration"):
+                examples.extend(batch["input_ids"].numpy().tolist())
                 batch = {k: v.to(device) for k, v in batch.items()}
                 bert_input = {k: batch[k] for k in ['attention_mask', "token_type_ids", "input_ids"]}
 
@@ -199,7 +215,7 @@ def train(model, data_dict, args):
                     break
             mean_loss = np.mean(losses)
             all_losses[k].append(mean_loss)
-            result = utils.measure_classification_accuracy(preds, truths, label_map=label_map)
+            result = utils.measure_classification_accuracy(preds, truths,examples, label_map=label_map)
             result_wo_indices = {k: v for k, v in result.items() if k != "wrong_inds"}
             acc = result["acc"]
             print("Results for {}: ".format(k), result_wo_indices)
@@ -208,11 +224,13 @@ def train(model, data_dict, args):
                 print("Result", result_wo_indices)
                 best_acc = acc
                 best_model_weights = model.state_dict()
+                best_result = result
             epoch_results[k] = result
 
         train_summary[f"epoch_{n}"] = epoch_results
     train_summary["all_losses"] = all_losses
     train_summary["best_test_acc"] = best_acc
+    train_summary["best_result"] = best_result
 
     return best_model_weights, train_summary
 
@@ -296,14 +314,24 @@ def main():
         s_p = os.path.join(experiment_folder, "label_vocab.json")
         with open(s_p, "w") as o:
             json.dump(label_vocab, o)
+
         s_p = os.path.join(experiment_folder, "train_summary.json")
         with open(s_p, "w") as o:
             json.dump(train_summary, o)
+
         s_p = os.path.join(experiment_folder, "args.json")
         with open(s_p, "w") as o:
             json.dump(vars(args), o)
+
         model_save_path = os.path.join(experiment_folder, "best_model_weights.pkh")
         torch.save(best_model, model_save_path)
+
+        #write wrong examples
+        wrong_examples = train_summary["best_result"]["wrong_examples"]
+        wrong_save_path = os.path.join(experiment_folder, "wrong_examples.txt")
+        write_wrong_examples(wrong_examples,tokenizer,wrong_save_path)
+
+
 
         # copy best model
         test_acc = train_summary["best_test_acc"]

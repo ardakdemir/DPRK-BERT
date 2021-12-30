@@ -12,13 +12,14 @@ translator = Translator(service_urls=[
 ])
 
 
-def measure_classification_accuracy(preds, truths, label_map={"pos": 1, "neg": 0}):
+def measure_classification_accuracy(preds, truths, examples=None, label_map={"pos": 1, "neg": 0}):
     tp = 0
     fp = 0
     tn = 0
     fn = 0
     total = 0
-    wrong_inds = []
+    ind2labels = {v:k for k,v in label_map.items()}
+    wrong_examples = []
     for i, (l, p) in enumerate(zip(truths, preds)):
         total += 1
         if l == p:
@@ -31,7 +32,8 @@ def measure_classification_accuracy(preds, truths, label_map={"pos": 1, "neg": 0
                 fn += 1
             else:
                 fp += 1
-        wrong_inds.append(i)
+            if examples:
+                wrong_examples.append((examples[i],{"pred":ind2labels[p],"label":ind2labels[l]}))
     acc = (tp + tn) / total
     try:
         recall = tp / (fn + tp)
@@ -54,7 +56,7 @@ def measure_classification_accuracy(preds, truths, label_map={"pos": 1, "neg": 0
             "fp": fp,
             "tn": tn,
             "fn": fn,
-            "wrong_inds": wrong_inds
+            "wrong_examples": wrong_examples
             }
 
 
