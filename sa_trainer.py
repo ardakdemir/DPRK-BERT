@@ -99,7 +99,7 @@ def write_wrong_examples(wrong_examples,tokenizer,wrong_save_path):
         tokens = tokenizer.tokenizer.convert_ids_to_tokens(input_ids[:input_ids.index(3)])
         detokenized = tokenizer.detokenize(tokens)
         s.append("\t".join([detokenized,pred,label]) )
-    with open(wrong_save_path,"w") as o:
+    with open(wrong_save_path,"w",encoding="utf-8") as o:
         o.write("\n".join(s))
 
 def init_sa_model(num_classes, config, weight_file_path=None, bert_weight_file_path=None):
