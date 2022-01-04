@@ -10,16 +10,21 @@ from transformers import (BertConfig, BertModel,
 
 
 class SentenceClassifier(nn.Module):
-    def __init__(self, config, num_classes) -> None:
+    def __init__(self, config, num_classes, from_transformers=None, model_name=None) -> None:
         super(SentenceClassifier, self).__init__()
-        self.bert = BertModel(config)
+        if not from_transformers:
+            print("Initializing bert model from local path")
+            self.bert = BertModel(config)
+        else:
+            print("Initializing bert model from huggingface transformer")
+            self.bert = BertModel.from_pretrained(model_name)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.classifier = nn.Linear(config.hidden_size, num_classes)
 
     def forward(self, bert_input, labels=None, output_hidden_states=False):
         bert_output = self.bert(**bert_input)
         last_hidden_states = bert_output[0]
-        pooled_output = self.dropout(last_hidden_states)[:,0,:]#First hidden [CLS] token
+        pooled_output = self.dropout(last_hidden_states)[:, 0, :]  # First hidden [CLS] token
         logits = self.classifier(pooled_output)
         return logits, bert_output
 

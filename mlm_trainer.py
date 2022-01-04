@@ -43,6 +43,29 @@ KR_BERT_MODEL_NAME = "pytorch_model_char16424_bert.bin"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+model_dict = {
+        # "KR-BERT": {
+        # "model_name": "../kr-bert-pretrained/pytorch_model_char16424_bert.bin",
+        # "tokenizer": None,
+        # "config_name": None},
+        # "KR-BERT-CL": {
+        #     "model_name": dprk_cl_model_path,
+        #     "tokenizer": None,
+        #     "config_name": None},
+        # "DPRK-BERT": {"model_name": dprk_model_path,
+        #               "tokenizer": tokenizer_name,
+        #               "config_name": config_name},
+        "KR-BERT-MEDIUM": {"model_name": "snunlp/KR-Medium",
+                           "tokenizer": "snunlp/KR-Medium",
+                           "config_name": "snunlp/KR-Medium",
+                           "from_pretrained": True},
+        "mBERT": {"model_name": "bert-base-multilingual-cased",
+                  "tokenizer": "bert-base-multilingual-cased",
+                  "config_name": "bert-base-multilingual-cased",
+                  "from_pretrained": True}
+    }
+
+
 def get_exp_name(prefix=None):
     day, time = dt.datetime.now().isoformat().split("T")
     suffix = "_".join([day, "-".join(time.split(".")[0].split(":"))])
@@ -253,7 +276,6 @@ def train():
 
     config_path = args.config_name
     tokenizer_name = args.tokenizer_name if args.tokenizer_name else config_file.VOCAB_PATH
-
     bert_config = init_config(config_path)
     weight_path = config_file.WEIGHT_FILE_PATH
     model = init_mlm_model(bert_config, weight_path, from_scratch=train_from_scratch)

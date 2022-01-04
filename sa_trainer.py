@@ -46,6 +46,18 @@ def parse_args():
         help="Prefix of the path to store the files",
     )
     parser.add_argument(
+        "--from_transformers",
+        action="store_true",
+        default=False,
+        help="If passed, initialize a huggingface model.",
+    )
+    parser.add_argument(
+        "--transformer_model_name",
+        type=str,
+        default=None,
+        help="Transformer model name",
+    )
+    parser.add_argument(
         "--bert_weight_file_path",
         type=str,
         default=None,
@@ -89,25 +101,29 @@ def init_config(config_name=None):
     return config
 
 
-def write_wrong_examples(wrong_examples,tokenizer,wrong_save_path):
+def write_wrong_examples(wrong_examples, tokenizer, wrong_save_path):
     s = []
     s.append("Sentence\tprediction\tlabel")
     for e in wrong_examples:
-        input_ids,label_dict = e
+        input_ids, label_dict = e
         pred = label_dict["pred"]
         label = label_dict["label"]
         tokens = tokenizer.tokenizer.convert_ids_to_tokens(input_ids[:input_ids.index(3)])
         detokenized = tokenizer.detokenize(tokens)
-        s.append("\t".join([detokenized,pred,label]) )
-    with open(wrong_save_path,"w",encoding="utf-8") as o:
+        s.append("\t".join([detokenized, pred, label]))
+    with open(wrong_save_path, "w", encoding="utf-8") as o:
         o.write("\n".join(s))
 
-def init_sa_model(num_classes, config, weight_file_path=None, bert_weight_file_path=None):
-    sentence_classifier = SentenceClassifier(config, num_classes)
-    if weight_file_path:
-        sentence_classifier.init_self_weights(weight_file_path)
-    elif bert_weight_file_path:
-        sentence_classifier.init_bert_weights(bert_weight_file_path)
+
+def init_sa_model(num_classes, config, weight_file_path=None, bert_weight_file_path=None, from_pretrained=False,
+                  model_name=None):
+    sentence_classifier = SentenceClassifier(config, num_classes, from_transformers=from_pretrained,
+                                             model_name=model_name)
+    if not from_pretrained:
+        if weight_file_path:
+            sentence_classifier.init_self_weights(weight_file_path)
+        elif bert_weight_file_path:
+            sentence_classifier.init_bert_weights(bert_weight_file_path)
     print(sentence_classifier)
 
     return sentence_classifier
@@ -215,7 +231,7 @@ def train(model, data_dict, args):
                     break
             mean_loss = np.mean(losses)
             all_losses[k].append(mean_loss)
-            result = utils.measure_classification_accuracy(preds, truths,examples, label_map=label_map)
+            result = utils.measure_classification_accuracy(preds, truths, examples, label_map=label_map)
             result_wo_indices = {k: v for k, v in result.items() if k != "wrong_examples"}
             acc = result["acc"]
             print("Results for {}: ".format(k), result_wo_indices)
@@ -238,6 +254,13 @@ def train(model, data_dict, args):
 def main():
     args = parse_args()
     save_folder = args.save_folder
+    config_name = None
+    model_name = None
+    from_transformers = args.from_transformers
+    if from_transformers:
+        assert args.transformer_model_name, "Transformer model name must be defined when initializing from transformers."
+        config_name = args.transformer_model_name
+        model_name = args.transformer_model_name
     prefix = args.prefix
 
     dropout = np.arange(0, 0.55, 0.05)
@@ -270,16 +293,18 @@ def main():
 
         # init model
         num_classes = 2
-        config = init_config()
+        config = init_config(config_name)
         weight_file_path = args.weight_file_path
         dropout_rate = args.dropout_rate
         config.hidden_dropout_prob = dropout_rate
         bert_weight_file_path = args.bert_weight_file_path
         sa_model = init_sa_model(num_classes, config, weight_file_path=weight_file_path,
-                                 bert_weight_file_path=bert_weight_file_path)
+                                 bert_weight_file_path=bert_weight_file_path,
+                                 from_pretrained=from_transformers,
+                                 model_name=model_name)
 
         # init tokenizer
-        tokenizer, tokenizer_name = init_tokenizer(from_pretrained=False)
+        tokenizer, tokenizer_name = init_tokenizer(model_name, from_pretrained=from_transformers)
         print("Tokenizer", tokenizer_name)
 
         # init dataset
@@ -310,7 +335,6 @@ def main():
                                     "train_loss": train_summary["all_losses"]["train"]})
 
         # print results
-        root_folder = os.path.join(config_file.OUTPUT_FOLDER, save_folder, "best_results")
         s_p = os.path.join(experiment_folder, "label_vocab.json")
         with open(s_p, "w") as o:
             json.dump(label_vocab, o)
@@ -326,12 +350,10 @@ def main():
         model_save_path = os.path.join(experiment_folder, "best_model_weights.pkh")
         torch.save(best_model, model_save_path)
 
-        #write wrong examples
+        # write wrong examples
         wrong_examples = train_summary["best_result"]["wrong_examples"]
         wrong_save_path = os.path.join(experiment_folder, "wrong_examples.txt")
-        write_wrong_examples(wrong_examples,tokenizer,wrong_save_path)
-
-
+        write_wrong_examples(wrong_examples, tokenizer, wrong_save_path)
 
         # copy best model
         test_acc = train_summary["best_test_acc"]
