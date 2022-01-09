@@ -24,6 +24,9 @@ from transformers import (BertConfig, BertModel,
                           AdamW, get_scheduler,
                           DataCollatorForLanguageModeling)
 
+model_name_map = {"mbert": "bert-base-multilingual-cased",
+                  "bert_en": "bert-base-cased"}
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Finetune a transformers model on sentiment analysis task")
@@ -104,15 +107,25 @@ def init_config(config_name=None):
 def write_wrong_examples(wrong_examples, tokenizer, wrong_save_path):
     s = []
     s.append("Sentence\tprediction\tlabel")
+    wrong_example_list = []
     for e in wrong_examples:
         input_ids, label_dict = e
         pred = label_dict["pred"]
         label = label_dict["label"]
-        tokens = tokenizer.tokenizer.convert_ids_to_tokens(input_ids[:input_ids.index(3)])
+        sep_token_id = tokenizer.tokenizer.sep_token_id
+        tokens = tokenizer.tokenizer.convert_ids_to_tokens(input_ids[:input_ids.index(sep_token_id)])
         detokenized = tokenizer.detokenize(tokens)
         s.append("\t".join([detokenized, pred, label]))
+
+        d = {"detokenized": detokenized,
+             "pred": pred,
+             "label": label}
+        wrong_example_list.append(d)
+
     with open(wrong_save_path, "w", encoding="utf-8") as o:
         o.write("\n".join(s))
+
+    return wrong_example_list
 
 
 def init_sa_model(num_classes, config, weight_file_path=None, bert_weight_file_path=None, from_pretrained=False,
@@ -186,6 +199,8 @@ def train(model, data_dict, args):
     model.to(device)
     all_losses = defaultdict(list)
     num_epochs = args.num_train_epochs
+    test_results = defaultdict(list)
+    train_results = defaultdict(list)
     for n in range(num_epochs):
         epoch_results = {}
         for k, data in data_dict.items():
@@ -241,12 +256,18 @@ def train(model, data_dict, args):
                 best_acc = acc
                 best_model_weights = model.state_dict()
                 best_result = result
-            epoch_results[k] = result
-
+            epoch_results[k] = result_wo_indices
+            for key, v in result_wo_indices.items():
+                if k == "test":
+                    test_results[key].append(v)
+                else:
+                    train_results[key].append(v)
         train_summary[f"epoch_{n}"] = epoch_results
     train_summary["all_losses"] = all_losses
     train_summary["best_test_acc"] = best_acc
     train_summary["best_result"] = best_result
+    train_summary["train_results"] = train_results
+    train_summary["test_results"] = test_results
 
     return best_model_weights, train_summary
 
@@ -259,12 +280,13 @@ def main():
     from_transformers = args.from_transformers
     if from_transformers:
         assert args.transformer_model_name, "Transformer model name must be defined when initializing from transformers."
-        config_name = args.transformer_model_name
-        model_name = args.transformer_model_name
+        model_name = model_name_map[args.transformer_model_name]
+        config_name = model_name
+        model_name = model_name
     prefix = args.prefix
 
     dropout = np.arange(0, 0.55, 0.05)
-    # learning_rate = [5e-5, 5e-4, 1e-4, 1e-3, 5e-3]
+    learning_rate = [5e-5, 5e-4, 1e-4, 1e-3, 5e-3]
     learning_rate = [args.learning_rate]
     dropout = [args.dropout_rate]
     best_model = None
@@ -278,7 +300,7 @@ def main():
         d_r, l_r = c
         args.dropout_rate = d_r
         args.learning_rate = l_r
-        print("Running for {}".format(d_r, l_r))
+        print("Running for dropout: {}\tlearning_rate: {}".format(d_r, l_r))
 
         experiment_folder = os.path.join(config_file.OUTPUT_FOLDER, save_folder, str(index))
         if not os.path.exists(experiment_folder):
@@ -334,14 +356,14 @@ def main():
         basic_plotter.send_metrics({"test_loss": train_summary["all_losses"]["test"],
                                     "train_loss": train_summary["all_losses"]["train"]})
 
+        for k in train_summary["test_results"]:
+            basic_plotter.send_metrics({f"test_{k}": train_summary["test_results"][k],
+                                        f"train_{k}": train_summary["train_results"][k]})
+
         # print results
         s_p = os.path.join(experiment_folder, "label_vocab.json")
         with open(s_p, "w") as o:
             json.dump(label_vocab, o)
-
-        s_p = os.path.join(experiment_folder, "train_summary.json")
-        with open(s_p, "w") as o:
-            json.dump(train_summary, o)
 
         s_p = os.path.join(experiment_folder, "args.json")
         with open(s_p, "w") as o:
@@ -353,7 +375,13 @@ def main():
         # write wrong examples
         wrong_examples = train_summary["best_result"]["wrong_examples"]
         wrong_save_path = os.path.join(experiment_folder, "wrong_examples.txt")
-        write_wrong_examples(wrong_examples, tokenizer, wrong_save_path)
+        wrong_example_list = write_wrong_examples(wrong_examples, tokenizer, wrong_save_path)
+
+        # save results summary
+        s_p = os.path.join(experiment_folder, "train_summary.json")
+        with open(s_p, "w") as o:
+            train_summary["wrong_examples"] = wrong_example_list
+            json.dump(train_summary, o)
 
         # copy best model
         test_acc = train_summary["best_test_acc"]
