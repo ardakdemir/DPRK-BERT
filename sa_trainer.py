@@ -55,6 +55,13 @@ def parse_args():
         help="If passed, initialize a huggingface model.",
     )
     parser.add_argument(
+        "--hyperparam_search",
+        action="store_true",
+        default=False,
+        help="If passed, perform hyperparam search.",
+    )
+
+    parser.add_argument(
         "--transformer_model_name",
         type=str,
         default=None,
@@ -286,9 +293,10 @@ def main():
     prefix = args.prefix
 
     dropout = np.arange(0, 0.55, 0.05)
-    learning_rate = [5e-5, 5e-4, 1e-4, 1e-3, 5e-3]
-    learning_rate = [args.learning_rate]
-    dropout = [args.dropout_rate]
+    learning_rate = [1e-5,5e-5, 5e-4, 1e-4, 1e-3, 5e-3]
+    if not args.hyperparam_search:
+        learning_rate = [args.learning_rate]
+        dropout = [args.dropout_rate]
     best_model = None
     best_metric = 0
 
