@@ -293,16 +293,25 @@ def main():
     prefix = args.prefix
 
     dropout = np.arange(0, 0.55, 0.05)
-    learning_rate = [1e-5,5e-5, 5e-4, 1e-4, 1e-3, 5e-3]
+    learning_rate = [1e-5, 5e-5, 5e-4, 1e-4, 1e-3, 5e-3]
+
+    dropout = [0.1, 0.2]
+    learning_rate = [1e-5, 5e-5]
     if not args.hyperparam_search:
         learning_rate = [args.learning_rate]
         dropout = [args.dropout_rate]
     best_model = None
+
+    best_model_source = None
+    best_result = None
     best_metric = 0
 
     # init save_folders
     if save_folder is None:
         save_folder = get_exp_name(prefix)
+    best_model_root = os.path.join(config_file.OUTPUT_FOLDER, save_folder, "best_model_folder")
+    if not os.path.exists(best_model_root):
+        os.makedirs(best_model_root)
 
     for index, c in tqdm(enumerate(product(dropout, learning_rate)), desc="Hyperparam search"):
         d_r, l_r = c
@@ -396,9 +405,25 @@ def main():
         if test_acc > best_metric:
             best_metric = test_acc
             print("Best model so far achieved at {}".format(index))
-            best_model_root = os.path.join(config_file.OUTPUT_FOLDER, save_folder, "best_model_folder")
-            cmd = "cp -r {}/ {}".format(experiment_folder, best_model_root)
-            subprocess.call(cmd, shell=True)
+            best_model_source = experiment_folder
+            best_result = train_summary["best_result"]
+
+    # print result summary
+    print("\n\n===== Best Result =====\n")
+    s_p = os.path.join(best_model_source, "args.json")
+    with open(s_p, "r") as o:
+        args = json.load(o)
+    print("Params.")
+    for k in ["learning_rate","dropout_rate"]:
+        print("{}\t{}".format(k,args[k]))
+    result_wo_indices = {k: v for k, v in best_result.items() if k != "wrong_examples"}
+    print("\nResults.")
+    for k, v in result_wo_indices.items():
+        print("{}\t{}".format(k, round(v, 3)))
+
+    # copy best result only once
+    cmd = "cp  -r {}/* {}/".format(best_model_source, best_model_root)
+    subprocess.call(cmd, shell=True)
 
 
 if __name__ == "__main__":
