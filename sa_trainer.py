@@ -295,8 +295,8 @@ def main():
     dropout = np.arange(0, 0.55, 0.05)
     learning_rate = [1e-5, 5e-5, 5e-4, 1e-4, 1e-3, 5e-3]
 
-    dropout = [0.1, 0.2]
-    learning_rate = [1e-5, 5e-5]
+    # dropout = [0.1, 0.2]
+    # learning_rate = [1e-5, 5e-5]
     if not args.hyperparam_search:
         learning_rate = [args.learning_rate]
         dropout = [args.dropout_rate]
