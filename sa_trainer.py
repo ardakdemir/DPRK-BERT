@@ -33,7 +33,7 @@ def parse_args():
     parser.add_argument(
         "--dataset_folder",
         type=str,
-        default="../dprk-bert-data/dprk_sentiment_data_2612",
+        default="../dprk-bert-data/dprk_sentiment_data_0605",
         help="The name of the dataset to use (via the datasets library).",
     )
     parser.add_argument(
@@ -89,9 +89,9 @@ def parse_args():
         help="Initial learning rate (after the potential warmup period) to use.",
     )
     parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay to use.")
-    parser.add_argument("--num_train_epochs", type=int, default=20, help="Total number of training epochs to perform.")
+    parser.add_argument("--num_train_epochs", type=int, default=5, help="Total number of training epochs to perform.")
     parser.add_argument("--steps_per_epoch", type=int, default=1e9, help="Number of steps per epoch.")
-    parser.add_argument("--batch_size", type=int, default=8, help="batch size")
+    parser.add_argument("--batch_size", type=int, default=64, help="batch size")
     parser.add_argument("--dropout_rate", type=float, default=0.15, help="dropout_rate")
 
     args = parser.parse_args()
@@ -120,7 +120,7 @@ def write_wrong_examples(wrong_examples, tokenizer, wrong_save_path):
         pred = label_dict["pred"]
         label = label_dict["label"]
         sep_token_id = tokenizer.tokenizer.sep_token_id
-        tokens = tokenizer.tokenizer.convert_ids_to_tokens(input_ids[:input_ids.index(sep_token_id)])
+        tokens = tokenizer.tokenizer.convert_ids_to_tokens(input_ids[:input_ids.index(sep_token_id)+2])
         detokenized = tokenizer.detokenize(tokens)
         s.append("\t".join([detokenized, pred, label]))
 
@@ -183,6 +183,7 @@ def prepare_dataset(examples, tokenizer, label_vocab={}, max_seq_length=512, tex
         e["label"] = label_vocab[l]
         tokenized_input.update(e)
         tokenized_data.append(tokenized_input)
+    print("Label vocab", label_vocab)
     return tokenized_data, label_vocab
 
 

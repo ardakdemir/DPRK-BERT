@@ -52,11 +52,11 @@ def write_to_jsonl(data, save_file_path):
 
 
 def main():
-    jsonl_file_path = "/Users/ardaakdemir/dprk_research/dprk-bert-data/sentimentanalysis_dataset_2612.jsonl"
-    save_folder = "/Users/ardaakdemir/dprk_research/dprk-bert-data/dprk_sentiment_data_2612"
+    jsonl_file_path = "/Users/ardaakdemir/dprk_research/dprk-bert-data/sentimentanalysis_dataset_0605.jsonl"
+    save_folder = "/Users/ardaakdemir/dprk_research/dprk-bert-data/dprk_sentiment_data_0605"
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
-    split = 0.6
+    split = 0.8
     labels = ["negative-sentence", "positive-sentence"]
     data = read_jsonl(jsonl_file_path)
     labeled_data = get_labeled_data(data)
