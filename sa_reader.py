@@ -2,8 +2,9 @@ import json
 import os
 import argparse
 import jsonlines
+import numpy as np
 from tqdm import tqdm
-
+from collections import Counter
 
 def read_jsonl(jsonl_file_path):
     with jsonlines.open(jsonl_file_path) as reader:
@@ -63,13 +64,23 @@ def main():
     save_all_labeled_path = os.path.join(save_folder, "all_labeled.jsonl")
     write_to_jsonl(labeled_data, save_all_labeled_path)
     labeled_data = [l for l in labeled_data if l["tag"] in labels]
+    labeled_data_grouped = [[x for x in labeled_data if x["tag"]==l] for l in labels]
     print("{} samples for {} tags".format(len(labeled_data), labels))
-    cut = int(len(labeled_data) * split)
-    train, test = labeled_data[:cut], labeled_data[cut:]
-    for t in [(train, "train"), (test, "test")]:
-        print("{} samples for {}".format(len(t[0]), t[1]))
+    train_all,test_all = [],[]
+    for lab,grp in zip(labels,labeled_data_grouped):
+        cut = int(len(grp) * split)
+        train, test = grp[:cut], grp[cut:]
+        train_all.extend(train)
+        test_all.extend(test)
+
+    for t in [(train_all, "train"), (test_all, "test")]:
+        data = t[0]
+        np.random.shuffle(data)
+        counts = Counter([d["tag"] for d in data])
+        print("{} samples for {}".format(len(data), t[1]))
+        print(counts)
         p = os.path.join(save_folder, t[1] + ".jsonl")
-        write_to_jsonl(t[0], p)
+        write_to_jsonl(data, p)
 
 
 if __name__ == "__main__":

@@ -255,7 +255,7 @@ def train(model, data_dict, args):
             mean_loss = np.mean(losses)
             all_losses[k].append(mean_loss)
             result = utils.measure_classification_accuracy(preds, truths, examples, label_map=label_map)
-            result_wo_indices = {k: v for k, v in result.items() if k != "wrong_examples"}
+            result_wo_indices = {k: round(v,4) for k, v in result.items() if k != "wrong_examples"}
             acc = result["acc"]
             print("Results for {}: ".format(k), result_wo_indices)
             if k == "test" and acc > best_acc:
