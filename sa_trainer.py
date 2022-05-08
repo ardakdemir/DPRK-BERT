@@ -60,6 +60,12 @@ def parse_args():
         default=False,
         help="If passed, perform hyperparam search.",
     )
+    parser.add_argument(
+        "--freeze_bert",
+        action="store_true",
+        default=False,
+        help="If passed, freezes BERT-layer params.",
+    )
 
     parser.add_argument(
         "--transformer_model_name",
@@ -85,14 +91,14 @@ def parse_args():
     parser.add_argument(
         "--learning_rate",
         type=float,
-        default=1e-4,
+        default=1e-5,
         help="Initial learning rate (after the potential warmup period) to use.",
     )
     parser.add_argument("--weight_decay", type=float, default=0.0, help="Weight decay to use.")
     parser.add_argument("--num_train_epochs", type=int, default=5, help="Total number of training epochs to perform.")
     parser.add_argument("--steps_per_epoch", type=int, default=1e9, help="Number of steps per epoch.")
-    parser.add_argument("--batch_size", type=int, default=64, help="batch size")
-    parser.add_argument("--dropout_rate", type=float, default=0.15, help="dropout_rate")
+    parser.add_argument("--batch_size", type=int, default=16, help="batch size")
+    parser.add_argument("--dropout_rate", type=float, default=0.30, help="dropout_rate")
 
     args = parser.parse_args()
     return args
@@ -120,7 +126,7 @@ def write_wrong_examples(wrong_examples, tokenizer, wrong_save_path):
         pred = label_dict["pred"]
         label = label_dict["label"]
         sep_token_id = tokenizer.tokenizer.sep_token_id
-        tokens = tokenizer.tokenizer.convert_ids_to_tokens(input_ids[:input_ids.index(sep_token_id)+2])
+        tokens = tokenizer.tokenizer.convert_ids_to_tokens(input_ids[:input_ids.index(sep_token_id) + 2])
         detokenized = tokenizer.detokenize(tokens)
         s.append("\t".join([detokenized, pred, label]))
 
@@ -255,7 +261,7 @@ def train(model, data_dict, args):
             mean_loss = np.mean(losses)
             all_losses[k].append(mean_loss)
             result = utils.measure_classification_accuracy(preds, truths, examples, label_map=label_map)
-            result_wo_indices = {k: round(v,4) for k, v in result.items() if k != "wrong_examples"}
+            result_wo_indices = {k: round(v, 4) for k, v in result.items() if k != "wrong_examples"}
             acc = result["acc"]
             print("Results for {}: ".format(k), result_wo_indices)
             if k == "test" and acc > best_acc:
@@ -342,7 +348,10 @@ def main():
                                  bert_weight_file_path=bert_weight_file_path,
                                  from_pretrained=from_transformers,
                                  model_name=model_name)
-
+        if args.freeze_bert:
+            print("Freezing BERT weights")
+            for param in sa_model.bert.parameters():
+                param.requires_grad = False
         # init tokenizer
         tokenizer, tokenizer_name = init_tokenizer(model_name, from_pretrained=from_transformers)
         print("Tokenizer", tokenizer_name)
@@ -415,8 +424,8 @@ def main():
     with open(s_p, "r") as o:
         args = json.load(o)
     print("Params.")
-    for k in ["learning_rate","dropout_rate"]:
-        print("{}\t{}".format(k,args[k]))
+    for k in ["learning_rate", "dropout_rate"]:
+        print("{}\t{}".format(k, args[k]))
     result_wo_indices = {k: v for k, v in best_result.items() if k != "wrong_examples"}
     print("\nResults.")
     for k, v in result_wo_indices.items():

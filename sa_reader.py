@@ -64,6 +64,7 @@ def main():
     save_all_labeled_path = os.path.join(save_folder, "all_labeled.jsonl")
     write_to_jsonl(labeled_data, save_all_labeled_path)
     labeled_data = [l for l in labeled_data if l["tag"] in labels]
+    np.random.shuffle(labeled_data)
     labeled_data_grouped = [[x for x in labeled_data if x["tag"]==l] for l in labels]
     print("{} samples for {} tags".format(len(labeled_data), labels))
     train_all,test_all = [],[]

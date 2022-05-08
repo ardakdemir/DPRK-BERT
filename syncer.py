@@ -3,7 +3,10 @@ import sys
 import time
 import os
 
-
+"""
+Example run: 
+python3 syncer.py sentiment_analysis_0605_dprkbert hyper
+"""
 
 def sync_single(args):
     # for x in ["0-{}".format(str(a)) for a in range(1,10)]+['1']:
@@ -20,7 +23,7 @@ def sync_hyperparam(args):
     root = "~/dprk-research/experiment_outputs"
     # source_folder = os.path.join(root,args[1]+ '_'+x,"plots")
     source_folder = os.path.join(root, args[1], "best_model_folder")
-    save_folder = os.path.join("../experiment_outputs", args[1])
+    save_folder = os.path.join("../experiment_outputs_hgc", args[1])
     if not os.path.exists(save_folder): os.makedirs(save_folder)
     cmd = "scp -r hgc:{}/* {}".format(source_folder, save_folder)
     subprocess.call(cmd, shell=True)
